@@ -6,6 +6,18 @@ Visualize, analyze, and download atmospheric and oceanic variables in stunning d
 
 ---
 
+## Screenshots
+
+![Screenshot 1](Screenshot_1.png)
+![Screenshot 2](Screenshot_2.png)
+![Screenshot 3](screenshot_3.png)
+
+
+## Demo
+
+[![Demo Video](ERMES.mp4)
+
+
 ## 🌍 What is This?
 
 This project lets you **fetch, plot, and analyze ERA5 climate data** for any Mediterranean subdomain, using a fast, responsive web interface (Bokeh server).  
