@@ -40,7 +40,7 @@ This project lets you **fetch, plot, and analyze ERA5 climate data** for any Med
     ```
 
 2. **Set your Copernicus CDS API key**  
-   Edit `ERMES.py` or your `.cdsapirc` file with your own [CDS API credentials](https://cds.climate.copernicus.eu/api-how-to).
+   Edit `ERMES.py` or your `.cdsapirc` file with your own [CDS API credentials](https://cds.climate.copernicus.eu/).
 
 3. **Run the app:**
     ```bash
