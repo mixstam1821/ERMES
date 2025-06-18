@@ -6,3 +6,4 @@ pyproj
 scipy
 bokeh
 xyzservices
+netcdf4
