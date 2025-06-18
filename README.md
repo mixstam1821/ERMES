@@ -10,12 +10,12 @@ Visualize, analyze, and download atmospheric and oceanic variables in stunning d
 
 ![Screenshot 1](Screenshot_1.png)
 ![Screenshot 2](Screenshot_2.png)
-![Screenshot 3](screenshot_3.png)
+![Screenshot 3](Screenshot_3.png)
 
 
 ## Demo
 
-[![Demo Video](ERMES.mp4)
+[![Demo Video](Screenshot_2.png)](ERMES.mp4)
 
 
 ## 🌍 What is This?
