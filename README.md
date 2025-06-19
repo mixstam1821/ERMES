@@ -11,7 +11,7 @@ Load, visualize and analyze atmospheric and oceanic variables with high precisio
 ---
 ## How to use it?
 
-- Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data.
+- Set the lat/lon range for the area of interest and select the date range (change the default values). Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data.
   ![Alt text](2025-06-19_15-03.gif)
   
 - After around a minute, the data will be loaded from the ERA5 database. The map plot corresponds to one date, which you can change with the slider or the dropdown menu.
@@ -71,7 +71,7 @@ You will see a message: `Bokeh app running at: http://localhost:9263/ERMES`. Ope
 
 OR
 
-Visit the online [app](https://py.cafe/app/mixstam1821/ERMES%3A%20ERA5%20Meteorology%20Explorer%20System)
+Visit the online [app](https://py.cafe/app/mixstam1821/ERMES%3A%20ERA5%20Meteorology%20Explorer%20System).
 
 ---
 
