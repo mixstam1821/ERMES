@@ -1,22 +1,17 @@
 # ERMES
 ERA5 METEOROLOGY EXPLORER SYSTEM
 
-**Advanced interactive explorer for ERA5 reanalysis data, built in Python with Bokeh.**  
-Visualize, analyze, and download atmospheric and oceanic variables in stunning detail.
+**Advanced interactive explorer for ERA5 reanalysis data, built in Python with Bokeh.**
+
+Visualize, analyze, and download atmospheric and oceanic variables with high precision for recent decades and historical weather events.
+
+> **Note:** ERA5 data is updated with a delay. Please use data up to the last completed month—data for the current month may not yet be available.
+
 
 ---
-
-## Screenshots
-
-![Screenshot 1](Screenshot_1.png)
-![Screenshot 2](Screenshot_2.png)
-![Screenshot 3](Screenshot_3.png)
-
-
 ## How to use it!
 
-- Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data.
-  Important: ERA5 data is updated with a delay. Please use data up to the last completed month, as the current month may not be available.
+- Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data. Live data is not supported currently.
   ![Alt text](2025-06-19_15-03.gif)
 - After around a minute, the data will be loaded from the ERA5 database. The map plot corresponds to one date, which you can change with the slider or the dropdown menu.
   Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location.
@@ -29,11 +24,6 @@ Visualize, analyze, and download atmospheric and oceanic variables in stunning d
   ![Alt text](2025-06-19_15-15.gif)
 - After the monthly data loading, you can explore it or change the variable.
   ![Alt text](2025-06-19__15-17.gif)
-
-  
-  
-
-
 
 
 ## 🌍 What is This?
@@ -58,7 +48,7 @@ This project lets you **fetch, plot, and analyze ERA5 climate data** for any Med
     ```
 
 2. **Set your Copernicus CDS API key**  
-   Edit `ERMES.py` or your `.cdsapirc` file with your own [CDS API credentials](https://cds.climate.copernicus.eu/).
+   Edit `ERMES.py` or your `.cdsapirc` file with your own [CDS API credentials](https://cds.climate.copernicus.eu/). Currently, my key is used.
 
 3. **Run the app:**
     ```bash
@@ -119,5 +109,6 @@ ERMES.py
 ├── Callbacks (Slider, Tap, Variable Change, etc)
 └── App Layout & Main Loop
  ```
-## Important
-ERA5 data is updated with a delay. Please use data up to the last completed month, as the current month may not be available.
+## Feedback
+Feedback is welcome!
+Please share your suggestions or issues to help me make this project even better.
