@@ -31,16 +31,6 @@ Load, visualize and analyze atmospheric and oceanic variables with high precisio
   ![Alt text](2025-06-19__15-17.gif)
 
 
-## How to run it?
-```
-git clone https://github.com/mixstam1821/ERMES.git
-cd ERMES
-docker build -t ermes-app .
-docker run -p 9263:9263 ermes-app
-```
-You will see a message: `Bokeh app running at: http://localhost:9263/ERMES`. Open `http://localhost:9263/ERMES` and enjoy.
-
-
 ## 🌍 What is This?
 
 This project lets you **fetch, plot, and analyze ERA5 climate data** for any Mediterranean subdomain, using a fast, responsive web interface (Bokeh server).  
@@ -69,6 +59,19 @@ This project lets you **fetch, plot, and analyze ERA5 climate data** for any Med
     ```bash
     bokeh serve --show ERMES.py
     ```
+OR
+
+```
+git clone https://github.com/mixstam1821/ERMES.git
+cd ERMES
+docker build -t ermes-app .
+docker run -p 9263:9263 ermes-app
+```
+You will see a message: `Bokeh app running at: http://localhost:9263/ERMES`. Open `http://localhost:9263/ERMES` and enjoy.
+
+OR
+
+Visit the online [app](https://py.cafe/app/mixstam1821/ERMES%3A%20ERA5%20Meteorology%20Explorer%20System)
 
 ---
 
