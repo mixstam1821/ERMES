@@ -1,5 +1,5 @@
 # Use an official Python slim image
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 # System dependencies for netCDF4, pyproj, etc.
 RUN apt-get update && \
