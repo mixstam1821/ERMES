@@ -9,7 +9,7 @@ Load, visualize and analyze atmospheric and oceanic variables with high precisio
 
 
 ---
-## How to use it!
+## How to use it?
 
 - Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data.
   ![Alt text](2025-06-19_15-03.gif)
@@ -29,6 +29,16 @@ Load, visualize and analyze atmospheric and oceanic variables with high precisio
   
 - After the monthly data loading, you can explore it or change the variable.
   ![Alt text](2025-06-19__15-17.gif)
+
+
+## How to run it?
+```
+git clone https://github.com/mixstam1821/ERMES.git
+cd ERMES
+docker build -t ermes-app .
+docker run -p 9263:9263 ermes-app
+```
+You will see a message: `Bokeh app running at: http://localhost:9263/ERMES`. Open `http://localhost:9263/ERMES` and enjoy.
 
 
 ## 🌍 What is This?
