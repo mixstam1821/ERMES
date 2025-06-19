@@ -3,7 +3,7 @@ ERA5 METEOROLOGY EXPLORER SYSTEM
 
 **Advanced interactive explorer for ERA5 reanalysis data, built in Python with Bokeh.**
 
-Visualize, analyze, and download atmospheric and oceanic variables with high precision for recent decades and historical weather events.
+Load, visualize and analyze atmospheric and oceanic variables with high precision for recent decades and historical weather events.
 
 > **Note:** ERA5 data is updated with a delay. Please use data up to the last completed month—data for the current month may not yet be available.
 
@@ -11,17 +11,22 @@ Visualize, analyze, and download atmospheric and oceanic variables with high pre
 ---
 ## How to use it!
 
-- Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data. Live data is not supported currently.
+- Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data.
   ![Alt text](2025-06-19_15-03.gif)
+  
 - After around a minute, the data will be loaded from the ERA5 database. The map plot corresponds to one date, which you can change with the slider or the dropdown menu.
-  Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location.
+  Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location. By clicking on the points in the timeseries, you can also change the date on the map.
   ![Alt text](2025-06-19__15-06.gif)
+  
 - You can change the colormap and the it's min max values.
   ![Alt text](2025-06-19__15-07.gif)
+  
 - Changing the variable will automatically start loading the new data.
   ![Alt text](2025-06-19_15-08.gif)
+  
 - If you want to go monthly, firstly set the new date range (eg, April 2020 to May 2025) and then press the monthly button.
   ![Alt text](2025-06-19_15-15.gif)
+  
 - After the monthly data loading, you can explore it or change the variable.
   ![Alt text](2025-06-19__15-17.gif)
 
