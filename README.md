@@ -33,7 +33,7 @@ Load, visualize and analyze atmospheric and oceanic variables with high precisio
 
 ## 🌍 What is This?
 
-This project lets you **fetch, plot, and analyze ERA5 climate data** for any Mediterranean subdomain, using a fast, responsive web interface (Bokeh server).  
+This project lets you **fetch, plot, and analyze ERA5 climate data** for any world region, using a fast, responsive web interface (Bokeh server).  
 **Features:**
 - Hourly and Monthly ERA5 data fetch via Copernicus CDS
 - Custom region and date range selection
