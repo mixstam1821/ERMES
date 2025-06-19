@@ -16,18 +16,18 @@ Visualize, analyze, and download atmospheric and oceanic variables in stunning d
 ## How to use it!
 
 - Set the lat/lon range for the area of interest and select the date range. Then press the button on the top to load the data.
-  ![Alt text](Peek 2025-06-19 15-03.gif)
+  ![Alt text](2025-06-19_15-03.gif)
 - After around a minute, the data will be loaded from the ERA5 database. The map plot corresponds to one date, which you can change with the slider or the dropdown menu.
   Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location.
-   ![Alt text](Peek 2025-06-19 15-06.gif)
+   ![Alt text](2025-06-19_15-06.gif)
 - You can change the colormap and the it's min max values.
-   ![Alt text](Peek 2025-06-19 15-07.gif)
+   ![Alt text](2025-06-19_15-07.gif)
 - Changing the variable will automatically start loading the new data.
-   ![Alt text](Peek 2025-06-19 15-08.gif)
+   ![Alt text](2025-06-19_15-08.gif)
 - If you want to go monthly, firstly set the new date range (eg, April 2020 to May 2025) and then press the monthly button.
-   ![Alt text](Peek 2025-06-19 15-15.gif)
+   ![Alt text](2025-06-19_15-15.gif)
 - After the monthly data loading, you can explore it or change the variable.
-  ![Alt text](Peek 2025-06-19 15-17.gif)
+  ![Alt text](2025-06-19_15-17.gif)
 
   
   
