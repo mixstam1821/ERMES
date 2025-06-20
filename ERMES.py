@@ -411,13 +411,16 @@ def on_map_tap(event):
     times = pd.to_datetime(times)
     timeseries_src.data = dict(time=times, value=values)
     timeseries_plot.yaxis.axis_label = ylabel
-
+    x_min = times.min()
+    x_max = times.max()
     # After updating timeseries_src.data and after calculating y_min/y_max:
     if len(values) > 0 and np.any(np.isfinite(values)):
         y_min = np.nanmin(values)
         y_max = np.nanmax(values)
         y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
         timeseries_plot.y_range = Range1d(start=y_min - y_pad, end=y_max + y_pad)
+        timeseries_plot.x_range = Range1d(start=x_min, end=x_max)
+
     else:
         timeseries_plot.y_range = Range1d(start=0, end=1)
     # --- Fill info_div ---
@@ -746,12 +749,15 @@ def on_box_change(attr, old, new):
         timeseries_src.data = dict(time=times, value=values)
         ylabel = f"{variable_units_map.get(variable, '')}"
         timeseries_plot.yaxis.axis_label = ylabel
-
+        x_min = times.min()
+        x_max = times.max()
         if len(values) > 0 and np.any(np.isfinite(values)):
             y_min = np.nanmin(values)
             y_max = np.nanmax(values)
             y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
             timeseries_plot.y_range = Range1d(start=y_min - y_pad, end=y_max + y_pad)
+            timeseries_plot.x_range = Range1d(start=x_min, end=x_max)
+
         else:
             timeseries_plot.y_range = Range1d(start=0, end=1)
             
