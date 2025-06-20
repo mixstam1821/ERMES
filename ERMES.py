@@ -864,7 +864,7 @@ p = figure(
     x_range=(x0, x1), y_range=(y0, y1),
     width=1600, height=500,
     title="ERA5",
-    tools="pan,wheel_zoom,reset",active_scroll="wheel_zoom",background_fill_color="#343838",border_fill_color="#343838",styles = {'margin-left': '-330px'}
+    tools="pan,wheel_zoom,reset",active_drag="pan", active_scroll="wheel_zoom",background_fill_color="#343838",border_fill_color="#343838",styles = {'margin-left': '-330px'}
 )
 p.title.text_color = "white"
 p.add_tile(xyz.OpenStreetMap.Mapnik)
@@ -911,7 +911,6 @@ rb = p.rect(
 # Add the BoxEditTool to your map and toolbar
 box_edit_tool = BoxEditTool(renderers=[rb], num_objects=1)  # Limit to 1 rectangle at a time
 p.add_tools(box_edit_tool)
-p.toolbar.active_drag = box_edit_tool
 
 
 # Web Mercator to Longitude
