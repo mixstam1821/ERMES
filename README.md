@@ -5,30 +5,33 @@ ERA5 METEOROLOGY EXPLORER SYSTEM
 
 Load, visualize and analyze atmospheric and oceanic variables with high precision for recent decades and historical weather events.
 
-> **Note:** ERA5 data is updated with a delay. Please use data up to the last completed month—data for the current month may not yet be available.
+> **Note:** ERA5 monthly means are only available up to the last completed month while for the hourly with a lag of a few days. If you request the current (incomplete) month or current day, the CDS will fail!
 
 
 ---
 ## How to use it?
 
-- Set the lat/lon range for the area of interest and select the date range (change the default values). Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data.
-  ![Alt text](2025-06-19_15-03.gif)
+- Quick start: Set the lat/lon range for the area of interest and select the date range (change the default values). Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data. By default, the hourly mode is selected, so start with that.
+  ![Alt text](assets/er1.gif)
   
 - After around a minute, the data will be loaded from the ERA5 database. The map plot corresponds to one date, which you can change with the slider or the dropdown menu.
-  Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location. By clicking on the points in the timeseries, you can also change the date on the map.
-  ![Alt text](2025-06-19__15-06.gif)
+  Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location. By clicking on the points in the timeseries, you can also change the date on the map. Use the play button to animate the map.
+  ![Alt text](assets/er2.gif)
   
-- You can change the colormap and the it's min max values.
-  ![Alt text](2025-06-19__15-07.gif)
+- You can change the colormap and the it's min max values. Interact with wheel zoom and click events. You can also select a box area to get the spatially averaged timeseries. Firstly, you have to select the box on the toolbox. Then press shift and then with the mouse click drag to select the region. Free up the mouse click, and then free up the shift button. The red box can be deleted by click on it and pressing the backspace. The button Download Timeseries CSV will download the current timeseries.
+  ![Alt text](assets/er3.gif)
+  ![Alt text](assets/er4.gif)
   
 - Changing the variable will automatically start loading the new data.
-  ![Alt text](2025-06-19_15-08.gif)
-  
+  ![Alt text](assets/er5.gif)
+  ![Alt text](assets/er6.gif)
+
 - If you want to go monthly, firstly set the new date range (eg, April 2020 to May 2025) and then press the monthly button.
-  ![Alt text](2025-06-19_15-15.gif)
+  ![Alt text](assets/er7.gif)
+
   
 - After the monthly data loading, you can explore it or change the variable.
-  ![Alt text](2025-06-19__15-17.gif)
+  ![Alt text](assets/er8.gif)
 
 
 ## 🌍 What is This?
