@@ -130,6 +130,70 @@ ERMES.py
 ├── Callbacks (Slider, Tap, Variable Change, etc)
 └── App Layout & Main Loop
  ```
+```
+ERA5 Variables Supported in ERMES
+
+10m_u_component_of_wind – 10m U Wind
+
+10m_v_component_of_wind – 10m V Wind
+
+2m_dewpoint_temperature – 2m Dewpoint Temperature
+
+2m_temperature – 2m Temperature
+
+mean_sea_level_pressure – Mean Sea Level Pressure
+
+mean_wave_direction – Mean Wave Direction
+
+sea_surface_temperature – Sea Surface Temperature
+
+surface_pressure – Surface Pressure
+
+total_precipitation – Total Precipitation
+
+surface_net_solar_radiation – Surface Net Solar Radiation
+
+surface_solar_radiation_downwards – Surface Solar Radiation Downwards
+
+total_cloud_cover – Total Cloud Cover
+
+evaporation – Evaporation
+
+snowfall – Snowfall
+
+k_index – K Index
+
+sea_ice_cover – Sea Ice Cover
+
+high_cloud_cover – High Cloud Cover
+
+medium_cloud_cover – Medium Cloud Cover
+
+low_cloud_cover – Low Cloud Cover
+
+lake_cover – Lake Cover
+
+lake_depth – Lake Depth
+
+snow_depth – Snow Depth
+
+snowmelt – Snowmelt
+
+soil_temperature_level_1 – Soil Temperature Level 1
+
+soil_temperature_level_2 – Soil Temperature Level 2
+
+maximum_individual_wave_height – Maximum Individual Wave Height
+
+mean_period_of_total_swell – Mean Period of Total Swell
+
+total_column_ozone – Total Column Ozone
+
+total_column_water_vapour – Total Column Water Vapour
+
+total_totals_index – Total Totals Index
+```
+
 ## Feedback
 Feedback is welcome!
 Please share your suggestions or issues to help me make this project even better.
