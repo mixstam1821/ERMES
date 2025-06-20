@@ -22,8 +22,7 @@ from bokeh.models import (
     ColumnDataSource, DatePicker, Slider, Button,
     LinearColorMapper, ColorBar, Div,
     TextInput, Button, InlineStyleSheet,GlobalInlineStyleSheet,
-    Select,HoverTool,TapTool,MultiChoice, RadioButtonGroup,WheelZoomTool, TextAreaInput
-
+    Select,HoverTool,TapTool,MultiChoice, RadioButtonGroup,WheelZoomTool, TextAreaInput,Range1d, CustomJSHover,CustomJS,BoxEditTool
 )
 
 # ─── SOME INITIALS ─────────────────────────────────────
@@ -47,6 +46,22 @@ era5_variables = [
     ("k_index", "K Index"),
     ("sea_ice_cover", "Sea Ice Cover"),
 ]
+era5_variables += [
+    ("high_cloud_cover", "High Cloud Cover"),
+    ("medium_cloud_cover", "Medium Cloud Cover"),
+    ("low_cloud_cover", "Low Cloud Cover"),
+    ("lake_cover", "Lake Cover"),
+    ("lake_depth", "Lake Depth"),
+    ("snow_depth", "Snow Depth"),
+    ("snowmelt", "Snowmelt"),
+    ("soil_temperature_level_1", "Soil Temperature Level 1"),
+    ("soil_temperature_level_2", "Soil Temperature Level 2"),
+    ("maximum_individual_wave_height", "Maximum Individual Wave Height"),
+    ("mean_period_of_total_swell", "Mean Period of Total Swell"),
+    ("total_column_ozone", "Total Column Ozone"),
+    ("total_column_water_vapour", "Total Column Water Vapour"),
+    ("total_totals_index", "Total Totals Index"),
+]
 
 variable_netcdf_map = {
     "10m_u_component_of_wind": "u10",
@@ -67,6 +82,25 @@ variable_netcdf_map = {
     "sea_ice_cover": "siconc"
 }
 
+variable_netcdf_map.update({
+    "high_cloud_cover": "hcc",
+    "medium_cloud_cover": "mcc",
+    "low_cloud_cover": "lcc",
+    "lake_cover": "cl",           
+    "lake_depth": "dl",
+    "snow_depth": "sd",
+    "snowmelt": "smlt",
+    "soil_temperature_level_1": "stl1",
+    "soil_temperature_level_2": "stl2",
+    "maximum_individual_wave_height": "hmax",
+    "mean_period_of_total_swell": "mpts",
+
+    "total_column_ozone": "tco3",
+    "total_column_water_vapour": "tcwv",
+    "total_totals_index": "totalx",
+})
+
+
 variable_units_map = {
     "10m_u_component_of_wind": "m/s",
     "10m_v_component_of_wind": "m/s",
@@ -83,7 +117,24 @@ variable_units_map = {
     "evaporation": "m",
     "snowfall": "m",
     "k_index": "K",
-    "sea_ice_cover": "0|1"
+    "sea_ice_cover": "0|1",
+
+    "high_cloud_cover": "(0-1)",
+    "medium_cloud_cover": "(0-1)",
+    "low_cloud_cover": "(0-1)",
+    "lake_cover": "(0-1)",
+    "lake_depth": "m",
+    "snow_depth": "m",
+    "snowmelt": "m",
+    "soil_temperature_level_1": "°C",
+    "soil_temperature_level_2": "°C",
+    "maximum_individual_wave_height": "m",
+    "mean_period_of_total_swell": "s",
+    "total_column_ozone": "kg/m²",
+    "total_column_water_vapour": "kg/m²",
+    "total_totals_index": "°C", 
+
+
 }
 
 minmax_auto_set = {'value': True}   # dict for mutability in Bokeh callbacks
@@ -153,15 +204,15 @@ def update_image(attr, old, new):
     if variable == "total_precipitation":
         varname = "tp"
         da = ds.sel(valid_time=time_str, method="nearest")[varname]
-        da = da.where(da > 0.00001) * 1000  # Convert to mm, mask near-zero
+        da = da.where(da > 0.00001*1000) #* 1000  # Convert to mm, mask near-zero
         arr = da.values
         color_bar.title = "Precipitation (mm)"
-    elif varname in ['t2m','d2m','sst']:
-        # varname = "t2m"
-        da = ds.sel(valid_time=time_str, method="nearest")[varname]
-        da = da - 273.15           # Kelvin to Celsius
-        arr = da.values
-        color_bar.title = f"{variable} [{variable_units_map.get(variable)}]"
+    # elif varname in ['t2m','d2m','sst']:
+    #     # varname = "t2m"
+    #     da = ds.sel(valid_time=time_str, method="nearest")[varname]
+    #     da = da - 273.15           # Kelvin to Celsius
+    #     arr = da.values
+    #     color_bar.title = f"{variable} [{variable_units_map.get(variable)}]"
     
     else:
         print('')
@@ -361,23 +412,14 @@ def on_map_tap(event):
     timeseries_src.data = dict(time=times, value=values)
     timeseries_plot.yaxis.axis_label = ylabel
 
-    # # After you update timeseries_src.data:
-    times = timeseries_src.data['time']
-    values = timeseries_src.data['value']
-
-    if len(times) > 0 and len(values) > 0:
-        # Convert to numeric if needed (for pandas Timestamps etc)
-        x_min = np.nanmin(times)
-        x_max = np.nanmax(times)
+    # After updating timeseries_src.data and after calculating y_min/y_max:
+    if len(values) > 0 and np.any(np.isfinite(values)):
         y_min = np.nanmin(values)
         y_max = np.nanmax(values)
-        # Add some padding so lines aren't at the very edge
         y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
-        timeseries_plot.x_range.start = x_min
-        timeseries_plot.x_range.end = x_max
-        timeseries_plot.y_range.start = y_min - y_pad
-        timeseries_plot.y_range.end = y_max + y_pad
-
+        timeseries_plot.y_range = Range1d(start=y_min - y_pad, end=y_max + y_pad)
+    else:
+        timeseries_plot.y_range = Range1d(start=0, end=1)
     # --- Fill info_div ---
     lat_disp = f"{lat:.4f}"
     lon_disp = f"{lon:.4f}"
@@ -397,8 +439,16 @@ def on_map_tap(event):
         f" &nbsp;&nbsp; Slope: <b>{slope}</b> &nbsp;&nbsp; p-value: <b>{pval}</b>"
     )
 
+    download_info.data = dict(
+        variable=[variable_select.value],
+        lat=[f"{lat:.3f}"],
+        lon=[f"{lon:.3f}"],
+    )
+    box_bounds_div.text = f"point,{lat},{lon}"
 
 def on_click():
+    data_error_div.text = ""  # No error!
+
     div.text = wait_html
     layout.children[2] = column( column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button,column(div, styles = {'margin-left':'45px'}))
     for p in plots:
@@ -427,6 +477,7 @@ def run_animation():
 
 def on_variable_change(attr, old, new):
     # Show spinner immediately
+
     div.text = wait_html
     layout.children[2] = column(button, column(div, styles = {'margin-left':'45px'}))
 
@@ -573,15 +624,30 @@ def is_job_done():
     min_lon = min_lon_input.value
     max_lon = max_lon_input.value
 
-    ds = fetch_era5(sd, ed, variable, min_lat, max_lat, min_lon, max_lon)
+    try:
+        ds = fetch_era5(sd, ed, variable, min_lat, max_lat, min_lon, max_lon)
+        # Kelvin to Celsius conversion for temp variables, only if selected/requested
+        temp_vars = ['t2m', 'd2m', 'sst','stl1','stl2','totalx']
+        selected_var = variable_netcdf_map.get(variable, variable)
+        if selected_var in temp_vars and selected_var in ds.variables:
+            ds[selected_var] = ds[selected_var] - 273.15
+            ds[selected_var].attrs['units'] = '°C'
 
-    # ds = fetch_era5(sd, ed, variable)
-    doc._ds = ds
-    fill_date_multichoice()   # <<<--- CALL IT HERE!
 
-    update_image(None, None, None)
-    minmax_auto_set['value'] = True
-
+        if selected_var == 'tp':
+            # Convert total_precipitation from m to mm
+            ds[selected_var] = ds[selected_var] * 1000  # Convert to mm
+            ds[selected_var].attrs['units'] = 'mm'
+        # ds = fetch_era5(sd, ed, variable)
+        doc._ds = ds
+        data_error_div.text = ""  # No error!
+        fill_date_multichoice()   # <<<--- CALL IT HERE!
+        update_image(None, None, None)
+        minmax_auto_set['value'] = True
+    except Exception as e:
+        msg = str(e)
+        # Optionally, only show error if it's a data-related one:
+        data_error_div.text = f"Data error: <br>{msg}"
     return 1
 
 # ─── JOB POLLING LOGIC ────────────────────────────────────────
@@ -597,31 +663,143 @@ def poll_job_status():
 def on_mode_change(attr, old, new):
     minmax_auto_set['value'] = True
     update_slider_range(None, None, None)  # << Add this!
-
     on_click()  # triggers data reload via poll_job_status
 
 
 def get_month_starts(start_date, end_date):
     # start_date, end_date: "YYYY-MM-DD"
-    from datetime import datetime
-    import pandas as pd
     start = pd.to_datetime(start_date).replace(day=1)
     end = pd.to_datetime(end_date).replace(day=1)
     months = pd.date_range(start, end, freq='MS')  # Month start
     return [int(m.timestamp()*1000) for m in months]  # as ms since epoch
 
+def on_box_change(attr, old, new):
+    # Only proceed if there's at least one box with nonzero size
+    xs = boxes_source.data.get('x', [])
+    ys = boxes_source.data.get('y', [])
+    widths = boxes_source.data.get('width', [])
+    heights = boxes_source.data.get('height', [])
+    if len(xs) == 0 or widths[0] == 0 or heights[0] == 0:
+        info_div.text = "Draw a rectangle on the map."
+        timeseries_src.data = dict(time=[], value=[])
+        return
 
+    # Take the first box (since num_objects=1)
+    x_center = xs[0]
+    y_center = ys[0]
+    width = widths[0]
+    height = heights[0]
+    if width == 0 or height == 0:
+        info_div.text = "Draw a rectangle on the map."
+        timeseries_src.data = dict(time=[], value=[])
+        return
 
+    # Convert from center/width/height to box bounds (Web Mercator)
+    x0 = x_center - width/2
+    x1 = x_center + width/2
+    y0 = y_center - height/2
+    y1 = y_center + height/2
+
+    # Convert box corners to lon/lat
+    lon0, lat0 = transformer.transform(x0, y0, direction='INVERSE')
+    lon1, lat1 = transformer.transform(x1, y1, direction='INVERSE')
+    min_lat, max_lat = min(lat0, lat1), max(lat0, lat1)
+    min_lon, max_lon = min(lon0, lon1), max(lon0, lon1)
+    doc._current_box_latlon = (min_lat, max_lat, min_lon, max_lon)
+    box_bounds_div.text = f"box,{min_lat},{max_lat},{min_lon},{max_lon}"
+
+    # Fetch and mask the variable data
+    try:
+        ds = doc._ds
+        variable = variable_select.value
+        varname = variable_netcdf_map.get(variable, variable)
+        lats = ds.latitude.values
+        lons = ds.longitude.values
+
+        lat_mask = (lats >= min_lat) & (lats <= max_lat)
+        lon_mask = (lons >= min_lon) & (lons <= max_lon)
+        if not lat_mask.any() or not lon_mask.any():
+            info_div.text = "Box: no grid points in region!"
+            timeseries_src.data = dict(time=[], value=[])
+            return
+
+        # Get the spatial region
+
+        arr = ds[varname][:, lat_mask, :][:, :, lon_mask]
+        lats_sub = ds.latitude.values[lat_mask]
+        # Compute weights: shape (n_lats, 1)
+        weights = np.cos(np.deg2rad(lats_sub)).reshape(-1, 1)
+        weights = weights / weights.sum()  # normalize so sum=1
+
+        # Weighted average for each timestep
+        # arr: shape (time, n_lats, n_lons)
+        # weights: (n_lats, 1), will broadcast over n_lons
+        weighted = arr * weights  # shape (time, n_lats, n_lons)
+        avg_ts = np.nansum(weighted, axis=(1,2)) / np.nansum(~np.isnan(arr) * weights, axis=(1,2))
+
+        # Update timeseries plot
+
+        # Times and values
+        times = ds['valid_time'].values
+        times = pd.to_datetime(times)
+        values = avg_ts.values if hasattr(avg_ts, "values") else avg_ts
+        timeseries_src.data = dict(time=times, value=values)
+        ylabel = f"{variable_units_map.get(variable, '')}"
+        timeseries_plot.yaxis.axis_label = ylabel
+
+        if len(values) > 0 and np.any(np.isfinite(values)):
+            y_min = np.nanmin(values)
+            y_max = np.nanmax(values)
+            y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
+            timeseries_plot.y_range = Range1d(start=y_min - y_pad, end=y_max + y_pad)
+        else:
+            timeseries_plot.y_range = Range1d(start=0, end=1)
+            
+        # Slope and p-value for the spatial mean
+        mask = pd.notnull(values) & ~pd.isna(values)
+        if np.sum(mask) > 2:
+            y = values[mask]
+            x = np.arange(len(y))
+            result = linregress(x, y)
+            slope = f"{result.slope:.4g}"
+            pval = f"{result.pvalue:.3g}"
+        else:
+            slope = "--"
+            pval = "--"
+
+        info_div.text = (
+            f"Box: Lat [{min_lat:.3f}, {max_lat:.3f}], "
+            f"Lon [{min_lon:.3f}, {max_lon:.3f}] "
+            f"Slope: <b>{slope}</b> &nbsp;&nbsp; p-value: <b>{pval}</b>"
+        )
+
+    except Exception as e:
+        info_div.text = f"Box error: {e}"
+        timeseries_src.data = dict(time=[], value=[])
+
+def cusj():
+    num=1
+    return CustomJSHover(code=f"""
+    special_vars.indices = special_vars.indices.slice(0,{num})
+    return special_vars.indices.includes(special_vars.index) ? " " : " hidden "
+    """)
+def hovfun(tltl):
+    return """<div @hidden{custom} style="background-color: #343838; padding: 5px; border-radius: 15px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);">        
+    """+tltl+"""
+    </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f;} </style> """
 # ─── WIDGETS ─────────────────────────────────────
-
+data_error_div = Div(text="<pre>Waiting for Errors...</pre>", width=700, height=200, styles={ "background": "#11151c", "color": "#19ffe0", "font-family": "Consolas, monospace", "font-size": "1.06em", "margin-left": "32px", "border-radius": "12px", "box-shadow": "0 2px 16px #00ffe033", "overflow-y": "auto", "white-space": "pre-wrap", "padding": "8px 18px", 'margin-top': '30px' })
 date_time_display = Div(text="", width=340, height=32, stylesheets=[fancy_div_style])
 stats_div = Div(text="Min: --<br>Max: --<br>Mean: --", width=260, height=48,)
-mode_radio = RadioButtonGroup( labels=["Hourly", "Monthly"], active=0, width=240, stylesheets=[radio_style],styles={"margin-top": "20px", "margin-bottom": "10px"} )
+mode_radio = RadioButtonGroup( labels=["Hourly", "Monthly"], active=0, width=240, stylesheets=[radio_style],styles={"margin-top": "20px", "margin-bottom": "10px", "margin-left": "10px"} )
 notes_textarea = TextAreaInput( title="Notes / Comments", value="", width=860, height=260, stylesheets=[textarea_style] )
 logo_url = "https://raw.githubusercontent.com/mixstam1821/bokeh_showcases/refs/heads/main/assets0/ermes.png"  # <-- set your actual path
-logo_div = Div( text=f'<img src="{logo_url}" style="width:200px; margin-bottom:10px;  border-radius:12px; box-shadow:0 2px 14px #00ffe055;">', width=200, height=150, styles={"display": "flex", "justify-content": "center"} )
+logo_div = Div( text=f'<img src="{logo_url}" style="width:200px; margin-bottom:10px;  margin-left:10px; border-radius:12px; box-shadow:0 2px 14px #00ffe055;">', width=200, height=150, styles={"display": "flex", "justify-content": "center"} )
 about_div = Div( text=""" <div style="text-align:center; color:#00ffe0; font-size:1.07em; font-family:Consolas, monospace;"> Developed with <span style="color:#ff4c4c;">&#10084;&#65039;</span> by <a href="https://github.com/mixstam1821" target="_blank" style="color:#ffb031; font-weight:bold; text-decoration:none;"> mixstam1821 </a> </div> """, width=420, height=38, styles={"margin-top": "10px"} )
 era5_div = Div( text=""" <div style="text-align:center; font-size:1.06em; color:#a5e7ff; font-family: Consolas, monospace;"> Powered by <a href="https://bokeh.org" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;">Bokeh</a> <span style="margin:0 6px;">and data from</span> <a href="https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;"> ERA5 Reanalysis (Copernicus CDS) </a> </div> """, width=440, height=38, styles={"margin-top": "2px", 'margin-left': '-30px'} )
+infdiv = Div( text=""" <div style="text-align:center; font-size:1.06em; color:#a5e7ff; font-family: Consolas, monospace;"> Visit the <a href="https://github.com/mixstam1821/ERMES" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;"> GitHub repo </a> for more details!  </a> </div> """, width=440, height=38, styles={"margin-top": "2px", 'margin-left': '10px'} )
+box_bounds_div = Div(text="", visible=False)
+
 # ts_xarray_div = Div( text="<pre>--</pre>", width=520, height=220, styles={ "background": "#141417", "color": "#f8fbff", "font-size": "1.06em", "margin-top": "15px", "padding": "8px 18px", "border-radius": "12px", "box-shadow": "0 2px 18px #00ffe055", "font-family": "Consolas, 'Fira Mono', 'monospace'" } )
 palette_dict = { "viridis": viridis(256), "inferno": inferno(256), "plasma": plasma(256), "cividis": cividis(256), "magma": magma(256) , "turbo": turbo(256) }
 min_lat_input = TextInput(title="Min Lat", value="30", width=100, stylesheets=[style2])
@@ -634,7 +812,7 @@ palette_select = Select( title="Colormap", value="viridis", options=["viridis", 
 min_input = TextInput(title="min", value="0", width=80,stylesheets=[style2])
 max_input = TextInput(title="max", value="1", width=80,stylesheets=[style2])
 stats_div = Div(text=" ", width=300, height=65, styles={"font-size": "1.2em", "color": "#00ffe0"},stylesheets=[style2])
-info_div = Div( text="Lat: --  Lon: --  Slope: --  p-value: --", width=850, height=30, styles={"font-size": "1.9em", "color": "#00ffe0", "margin": "4px"} )
+info_div = Div( text="Lat: --  Lon: --  Slope: --  p-value: --", width=1050, height=30, styles={"font-size": "1.9em", "color": "#00ffe0", "margin": "4px","margin-left": "-120px"} )
 variable_select = Select( title="Variable", value="total_precipitation", options=era5_variables, stylesheets=[style2] )
 play_button = Button(label="Play ▶️", button_type="primary", width=100, stylesheets=[style3])
 date_time_display = Div(text="", width=420, height=30, styles = {"font-size": "20px", "font-family": "Consolas, 'Courier New', monospace", "color": "#00ffe0",})
@@ -671,7 +849,6 @@ timeseries_plot.add_tools(scatter_taptool)
 wheel_zoom_x = WheelZoomTool(dimensions='width')
 timeseries_plot.add_tools(wheel_zoom_x)
 timeseries_plot.toolbar.active_scroll = wheel_zoom_x
-
 
 
 # 2.
@@ -720,11 +897,23 @@ image_renderer = p.image(
     image="image", x="x", y="y", dw="dw", dh="dh",
     source=image_src, color_mapper=color_mapper, alpha=0.6
 )
-# custom_tooltip2 = """ <div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);"> <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;"> <b>Lat</b> $y <br> <b>Lon</b> $x <br> <b>Value:</b> @image{0.000} </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f; } </style> """
-# p.add_tools(HoverTool( tooltips=custom_tooltip2,point_policy='snap_to_data' ))
 
+# Data source for rectangles (can support multiple, but start with one)
+boxes_source = ColumnDataSource(data=dict(x=[], y=[], width=[], height=[]))
+# This will show all rectangles in boxes_source
+rb = p.rect(
+    x='x', y='y',
+    width='width', height='height',
+    source=boxes_source,
+    fill_alpha=0.3, fill_color="orange", line_color="red", line_width=3
+)
 
-from bokeh.models import HoverTool, CustomJSHover
+# Add the BoxEditTool to your map and toolbar
+box_edit_tool = BoxEditTool(renderers=[rb], num_objects=1)  # Limit to 1 rectangle at a time
+p.add_tools(box_edit_tool)
+p.toolbar.active_drag = box_edit_tool
+tap_tool = p.select(type=TapTool)
+tap_tool.mode = 'replace'
 
 # Web Mercator to Longitude
 merc_x_to_lon = CustomJSHover(code="""
@@ -749,10 +938,9 @@ hover = HoverTool(
         "$x": merc_x_to_lon,
         "$y": merc_y_to_lat,
     },
-    point_policy='snap_to_data'
+    point_policy='snap_to_data', renderers = [image_renderer],
 )
 p.add_tools(hover)
-
 
 # ─── CALLBACKS ─────────────────────────────────────
 mode_radio.on_change('active', on_mode_change)
@@ -770,8 +958,58 @@ min_input.on_change("value", on_min_change)
 max_input.on_change("value", on_max_change)
 date_multichoice.on_change("value", on_date_multichoice_change)
 
+# Connect the callback
+boxes_source.on_change('data', on_box_change)
 
 # ─── LAYOUT ─────────────────────────────────────
+
+download_button = Button(label="Download Timeseries CSV", button_type="primary", width=190, stylesheets=[style3])
+download_info = ColumnDataSource(data=dict(variable=[""], lat=[""], lon=[""]))
+
+download_button.js_on_click(CustomJS(
+    args=dict(source=timeseries_src, box_bounds_div=box_bounds_div, variable_select=variable_select),
+    code="""
+    const data = source.data;
+    if (!data['time'] || data['time'].length === 0) {
+        alert("No timeseries data to download!");
+        return;
+    }
+
+    // Get variable name
+    let var_name = variable_select.value || "variable";
+    
+    // Read the most recent selection metadata
+    let meta = box_bounds_div.text.split(',');
+    let fname = "";
+    if (meta[0] === "box" && meta.length === 5) {
+        let min_lat = parseFloat(meta[1]), max_lat = parseFloat(meta[2]);
+        let min_lon = parseFloat(meta[3]), max_lon = parseFloat(meta[4]);
+        fname = `timeseries_${var_name}_lat${min_lat.toFixed(2)}-${max_lat.toFixed(2)}_lon${min_lon.toFixed(2)}-${max_lon.toFixed(2)}.csv`;
+    } else if (meta[0] === "point" && meta.length === 3) {
+        let lat = parseFloat(meta[1]), lon = parseFloat(meta[2]);
+        fname = `timeseries_${var_name}_lat${lat.toFixed(4)}_lon${lon.toFixed(4)}.csv`;
+    } else {
+        fname = `timeseries_${var_name}.csv`;
+    }
+
+    // Build CSV
+    let csv = "time,value\\n";
+    for (let i = 0; i < data['time'].length; i++) {
+        let t = new Date(data['time'][i]).toISOString();
+        let v = data['value'][i];
+        csv += `${t},${v}\\n`;
+    }
+    let blob = new Blob([csv], { type: "text/csv" });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    """
+))
 
 
 
@@ -780,7 +1018,7 @@ controls_inner = column(
     row(min_lon_input, max_lon_input, stylesheets=[gstyle]),
     row(start_picker, end_picker), variable_select, row(palette_select,
     row(min_input, max_input)),
-    play_button, hour_slider, date_multichoice, #date_time_display, stats_div,
+    play_button, hour_slider, date_multichoice, download_button, #date_time_display, stats_div,
     sizing_mode="stretch_width", stylesheets=[gstyle]
 )
 
@@ -792,12 +1030,12 @@ controls = column(
         "border-radius": "18px", "position": "absolute",
         "z-index": "0", "margin": "-10px", "padding": "28px",'margin-right': '20px'
     }),
-    controls_inner,styles = {'margin-left': '20px', 'margin-top': '30px', 'margin-bottom': '5px', 'width': '350px', 'height': '500px', 'position': 'relative', 'z-index': '1'},
+    controls_inner,styles = {'margin-left': '20px', 'margin-top': '10px', 'margin-bottom': '5px', 'width': '350px', 'height': '550px', 'position': 'relative', 'z-index': '1'},
     stylesheets=[gstyle]
 )
 
 layout = row(column(column(row(logo_div,column(date_time_display, stats_div)), mode_radio),controls),div2,column(button,styles = {'margin-top': '30px'}),stylesheets=[gstyle])
 doc = curdoc()
 doc.title = "ERMES"
-doc.add_root(column( layout, row(column(about_div, era5_div),notes_textarea), stylesheets=[gstyle] ))
+doc.add_root(column( layout, row(column(about_div, era5_div, infdiv),notes_textarea,data_error_div), stylesheets=[gstyle] ))
 update_slider_range(None, None, None)
