@@ -1,24 +1,28 @@
 # ERMES
 ERA5 METEOROLOGY EXPLORER SYSTEM
 
-**Advanced interactive explorer for ERA5 reanalysis data, built in Python with Bokeh.**
+ERMES is an advanced interactive explorer for ERA5 reanalysis data, built in Python with Bokeh. Effortlessly load, visualize, and analyze atmospheric and oceanic variables with high precision for both recent decades and historical weather events.
 
-Load, visualize and analyze atmospheric and oceanic variables with high precision for recent decades and historical weather events.
-
-> **Note:** ERA5 monthly means are only available up to the last completed month while for the hourly with a lag of a few days. If you request the current (incomplete) month or current day, the CDS will fail!
+> **Note:** ERA5 monthly means are available only up to the last fully completed month, while hourly data is accessible with a delay of a few days. Requests for the current (incomplete) month or current day will result in an error from the CDS. Such errors will be shown on the bottom right frame.
 
 
 ---
 ## How to use it?
 
-- Quick start: Set the lat/lon range for the area of interest and select the date range (change the default values). Then press the button on the top to load the data. Live data is not supported currently. Please prefer to explore historical weather or climatic data. By default, the hourly mode is selected, so start with that.
+- Quick Start:
+Set the latitude and longitude range for your area of interest and adjust the date range as needed. Then, press the top button to load the data.
+
+Note: Live data is not currently supported—please use the tool to explore historical weather or climate data. The default mode is hourly, so it’s recommended to start with that.
   ![Alt text](assets/er1.gif)
   
-- After around a minute, the data will be loaded from the ERA5 database. The map plot corresponds to one date, which you can change with the slider or the dropdown menu.
-  Click on a specific point (lat/lon) to get the corresponding timeseries of the selected variable at the specific location. By clicking on the points in the timeseries, you can also change the date on the map. Use the play button to animate the map.
+- After about a minute, the data will be loaded from the ERA5 database. The map displays data for a single date, which you can change using the slider or dropdown menu.
+Click on any location (lat/lon) on the map to view the timeseries of the selected variable at that point. You can also click on points within the timeseries plot to update the map to that specific date. Use the play button to animate the map over time.
   ![Alt text](assets/er2.gif)
   
-- You can change the colormap and the it's min max values. Interact with wheel zoom and click events. You can also select a box area to get the spatially averaged timeseries. Firstly, you have to select the box on the toolbox. Then press shift and then with the mouse click drag to select the region. Free up the mouse click, and then free up the shift button. The red box can be deleted by click on it and pressing the backspace. The button Download Timeseries CSV will download the current timeseries.
+- You can change the colormap and adjust its minimum and maximum values. Interact with the map using wheel zoom and click events.
+To get a spatially averaged timeseries, select the box tool from the toolbox, then hold Shift and click-drag to draw your region of interest. Release the mouse first, then release Shift.
+To remove the red selection box, simply click on it and press Backspace.
+Use the "Download Timeseries CSV" button to download the currently displayed timeseries.
   ![Alt text](assets/er3.gif)
   ![Alt text](assets/er4.gif)
   
