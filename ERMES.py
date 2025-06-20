@@ -841,7 +841,7 @@ timeseries_plot.xaxis.axis_label = 'Time'
 timeseries_plot.yaxis.axis_label = 'Value'
 timeseries_plot.xgrid.grid_line_color = "#3c3c3c"
 timeseries_plot.ygrid.grid_line_color = "#3c3c3c"
-custom_tooltip = """ <div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);"> <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;"> 🕒 @time{%F %H:%M} <br> <b>Value:</b> @value{0.000} </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f; } </style> """
+custom_tooltip = """ <div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);"> <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;"> 🕒 @time{%F %H:%M} <br> <b>Value:</b> @value{0.0000000} </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f; } </style> """
 timeseries_plot.add_tools(HoverTool( tooltips=custom_tooltip, formatters={'@time': 'datetime'}, mode='vline', point_policy='snap_to_data' ))
 scatter_renderer = timeseries_plot.scatter('time', 'value', source=timeseries_src, size=9, line_color = 'black', color="orange", alpha=0.85)
 scatter_taptool = TapTool(renderers=[scatter_renderer])
@@ -912,8 +912,7 @@ rb = p.rect(
 box_edit_tool = BoxEditTool(renderers=[rb], num_objects=1)  # Limit to 1 rectangle at a time
 p.add_tools(box_edit_tool)
 p.toolbar.active_drag = box_edit_tool
-tap_tool = p.select(type=TapTool)
-tap_tool.mode = 'replace'
+
 
 # Web Mercator to Longitude
 merc_x_to_lon = CustomJSHover(code="""
