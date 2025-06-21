@@ -1,5 +1,5 @@
 attrs==25.3.0
-bokeh==3.7.3
+bokeh==3.6.3
 cdsapi==0.7.6
 certifi==2025.6.15
 cftime==1.6.4.post1
