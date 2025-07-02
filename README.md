@@ -7,6 +7,16 @@ ERMES is an advanced interactive explorer for ERA5 reanalysis data, built in Pyt
 
 
 ---
+
+## UPDATE 02.07.2025:
+- Monthly mode by default (emphasis for climatological data)
+- Annual and Hourly cycle added!
+- Trends for the 12 months of the year or the 24 hours of the day added!
+- When you click on map, a red cross appear to track the click point.
+
+![Alt text](assets/erv02.png)
+
+
 ## How to use it?
 
 - Quick Start:
