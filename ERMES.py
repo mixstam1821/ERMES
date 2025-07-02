@@ -28,6 +28,33 @@ from bokeh.models import (
 # ─── SOME INITIALS ─────────────────────────────────────
 curdoc().theme = 'dark_minimal'
 
+def cusj():
+    num=1
+    return CustomJSHover(code=f"""
+    special_vars.indices = special_vars.indices.slice(0,{num})
+    return special_vars.indices.includes(special_vars.index) ? " " : " hidden "
+    """)
+def hovfun(tltl):
+    return """<div @hidden{custom} style="background-color: #efffeb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);">        <font size="3" style="background-color: #efffeb; padding: 5px; border-radius: 5px;"> """+tltl+""" <br> </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f;} </style> """
+
+month_colors = [
+    "blue",      # Jan
+    "gray",   # Feb
+    "pink",   # Mar
+    "lime",    # Apr
+    "green",     # May
+    "yellow",   # Jun
+    "orange",     # Jul
+    "red",  # Aug
+    "deepskyblue",     # Sep
+    "brown",    # Oct
+    "steelblue",     # Nov
+    "purple",    # Dec
+]
+
+month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
 era5_variables = [
     ("10m_u_component_of_wind", "10m U Wind"),
     ("10m_v_component_of_wind", "10m V Wind"),
@@ -140,6 +167,13 @@ variable_units_map = {
 minmax_auto_set = {'value': True}   # dict for mutability in Bokeh callbacks
 is_playing = {'value': False}
 callback_id = {'value': None}
+hour_labels = [f"{h:02d}:00" for h in range(24)]
+hour_colors = [
+    "#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#ffff33",
+    "#a65628", "#f781bf", "#999999", "#66c2a5", "#fc8d62", "#8da0cb",
+    "#e78ac3", "#a6d854", "#ffd92f", "#e5c494", "#b3b3b3", "#1b9e77",
+    "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02", "#a6761d"
+]
 
 # ─── CSS ─────────────────────────────────────
 
@@ -158,8 +192,10 @@ radio_style = InlineStyleSheet(css=""" /* Outer container */ :host { background:
 base_variables = """ :host { /* CSS Custom Properties for easy theming */ --primary-color: #8b5cf6; --secondary-color: #06b6d4; --background-color: #1f2937; --surface-color: #343838; --text-color: #f9fafb; --accent-color: #f59e0b; --danger-color: #ef4444; --success-color: #10b981; --border-color: #4b5563; --hover-color: #6366f1; background: none !important; } """
 textarea_style  = InlineStyleSheet(css=base_variables + """ :host textarea { background: var(--surface-color) !important; color: var(--text-color) !important; border: 1px solid var(--border-color) !important; border-radius: 6px !important; padding: 10px 12px !important; font-size: 14px !important; font-family: inherit !important; transition: all 0.2s ease !important; resize: vertical !important; } :host textarea:focus { outline: none !important; border-color: var(--primary-color) !important; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important; } :host textarea::placeholder { color: #9ca3af !important; opacity: 0.7 !important; } """)
 fancy_div_style = InlineStyleSheet(css=""" :host  { background: linear-gradient(90deg, #232b33 80%, #25224c 100%); color: #f1faee; font-family: Consolas, monospace; font-size: 1.13em; padding: 13px 16px; border-radius: 14px; box-shadow: 0 3px 16px #00ffe033; margin-bottom: 8px; margin-top: 7px; text-align: center; letter-spacing: 0.6px; font-weight: bold; line-height: 1.4; } """)
+fancy_div_style2 = InlineStyleSheet(css=""" :host { position: relative; background: #343838; color: #fff; border-radius: 16px; padding: 18px 28px; text-align: center; overflow: hidden; box-shadow: 0 6px 18px red; margin: 28px auto; } """)
 
 # ─── FUNCTIONS ─────────────────────────────────────
+
 
 def update_image(attr, old, new):
     if not hasattr(doc, "_ds"):
@@ -409,7 +445,33 @@ def on_map_tap(event):
     values = da.values
     times = ds['valid_time'].values
     times = pd.to_datetime(times)
-    timeseries_src.data = dict(time=times, value=values)
+
+
+    months = times.month
+    colors = [month_colors[m-1] for m in months]
+
+
+
+    
+    timeseries_src.data = dict(
+        time=times,
+        value=values,
+        hidden=[False]*len(times),
+        month=[month_names[m-1] for m in months],
+        color=[month_colors[m-1] for m in months],
+    )
+    for i, name in enumerate(month_names):
+        boolean_filters[i].booleans = [m == name for m in timeseries_src.data['month']]
+        
+    
+    avg_ts = da
+
+    series = pd.Series(avg_ts, index=pd.to_datetime(times))
+    monthly_means = series.groupby(series.index.month).mean()
+    print(monthly_means)
+    print('series', series)
+    months_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
     timeseries_plot.yaxis.axis_label = ylabel
     x_min = times.min()
     x_max = times.max()
@@ -438,8 +500,8 @@ def on_map_tap(event):
         pval = "--"
 
     info_div.text = (
-        f"Lat: <b>{lat_disp}</b> &nbsp;&nbsp; Lon: <b>{lon_disp}</b> "
-        f" &nbsp;&nbsp; Slope: <b>{slope}</b> &nbsp;&nbsp; p-value: <b>{pval}</b>"
+        f"Lat: <b>{lat_disp}</b> <br>Lon: <b>{lon_disp}</b><br>"
+        f"Slope: <b>{slope}</b> <br>p-value: <b>{pval}</b>"
     )
 
     download_info.data = dict(
@@ -449,11 +511,70 @@ def on_map_tap(event):
     )
     box_bounds_div.text = f"point,{lat},{lon}"
 
+
+    # --- CYCLE PLOT AND TRENDBAR LOGIC ---
+    mode = mode_radio.active  # 0=hourly, 1=monthly
+
+    dt = pd.to_datetime(times)
+    avg_series = pd.Series(values, index=dt)
+
+    if mode == 1:  # Monthly
+        groupby_vals = dt.month
+        group_labels = months_names
+        group_colors = month_colors
+        group_range = range(0, 12)
+    else:
+        groupby_vals = dt.hour
+        group_labels = hour_labels
+        group_colors = hour_colors
+        group_range = range(24)
+
+    # -- cycle (mean per group)
+    means = []
+    for g in group_range:
+        vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+        means.append(np.nanmean(vals) if np.any(~np.isnan(vals)) else np.nan)
+    cycleplot_src.data = dict(time=group_labels, value=means)
+    cycleplot.x_range.factors = group_labels
+
+    mmin = np.nanmin(means)
+    mmax = np.nanmax(means)
+    cycleplot.y_range = Range1d(start=mmin, end=mmax)
+
+    # -- trend (slope per group)
+    trends = []
+    for g in group_range:
+        vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+        if len(vals) < 2 or np.all(np.isnan(vals)):
+            trends.append(np.nan)
+            continue
+        valid = ~np.isnan(vals)
+        if np.sum(valid) < 2:
+            trends.append(np.nan)
+            continue
+        t_sel = vals.index[valid]
+        t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
+        y_sel = vals.values[valid]
+        slope, *_ = linregress(t_num, y_sel)
+        trends.append(slope)
+
+    colorss = ['purple' if v >= 0 else 'orange' for v in trends]
+    trendbar_src.data = dict(time=group_labels, value=trends,colors=colorss)
+    trendbar.y_range.factors = group_labels[::-1]
+    mm = np.nanmax(np.abs(trends))
+    trendbar.x_range = Range1d(start=-mm-mm*0.01, end=mm+mm*0.01)
+    trendbar.title.text = f"Trend for the {len(group_labels)} {'hours' if mode == 0 else 'months'}"
+
+    cross_source.data = dict(x=[event.x], y=[event.y])
+
+
+
+
 def on_click():
     data_error_div.text = ""  # No error!
 
     div.text = wait_html
-    layout.children[2] = column( column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button,column(div, styles = {'margin-left':'45px'}))
+    layout.children[2] = column( column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button,column(div, styles = {'margin-left':'10px'}))
     for p in plots:
         p.visible = False
     curdoc().add_timeout_callback(poll_job_status, 1)
@@ -482,7 +603,7 @@ def on_variable_change(attr, old, new):
     # Show spinner immediately
 
     div.text = wait_html
-    layout.children[2] = column(button, column(div, styles = {'margin-left':'45px'}))
+    layout.children[2] = column(Div(text="",height = 2),button, column(div, styles = {'margin-left':'10px'}))
 
     for p in plots:
         p.visible = False
@@ -590,6 +711,17 @@ def on_timeseries_tap(event):
     hr_ms = xs_ms[idx]
     hour_slider.value = int(hr_ms)  # this triggers heatmap update
 
+def on_timeseries_tap2(event):
+    # Find nearest x in timeseries_src
+    x_click = event.x  # this is in ms-since-epoch
+    xs = timeseries_src.data['time']
+    # xs are pandas Timestamp or np.datetime64, need ms
+    import pandas as pd
+    xs_ms = pd.to_datetime(xs).astype(np.int64) // 10**6
+    idx = np.abs(xs_ms - x_click).argmin()
+    hr_ms = xs_ms[idx]
+    hour_slider.value = int(hr_ms)  # this triggers heatmap update
+
 
 
     # Helper functions for Mercator transforms
@@ -658,7 +790,7 @@ def poll_job_status():
     if is_job_done() == 1:
         for p in plots:
             p.visible = True
-        layout.children[2] = column(column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button, plots[0], info_div, timeseries_plot,
+        layout.children[2] = column(column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button, row(column(plots[0], stylesheets=[fancy_div_style2],styles = {'margin-left': '-400px','margin-top': '3px'}), column(trendbar, stylesheets=[fancy_div_style2],styles = {'margin-left': '20px','margin-top': '0px'})), row(column(timeseries_plot, stylesheets=[fancy_div_style2],styles = {'margin-left': '-400px','margin-top': '0px'}),column(cycleplot, stylesheets=[fancy_div_style2],styles = {'margin-left': '20px','margin-top': '0px'}))
                                     )
     else:
         curdoc().add_timeout_callback(poll_job_status, 1)
@@ -683,8 +815,10 @@ def on_box_change(attr, old, new):
     widths = boxes_source.data.get('width', [])
     heights = boxes_source.data.get('height', [])
     if len(xs) == 0 or widths[0] == 0 or heights[0] == 0:
-        info_div.text = "Draw a rectangle on the map."
-        timeseries_src.data = dict(time=[], value=[])
+        info_div.text = "Draw a rectangle <br> on the map."
+        timeseries_src.data = dict(time=[], value=[], hidden=[] )
+        cycleplot_src.data = dict(time=[], value=[])
+        trendbar_src.data = dict(time=[], value=[])
         return
 
     # Take the first box (since num_objects=1)
@@ -693,8 +827,10 @@ def on_box_change(attr, old, new):
     width = widths[0]
     height = heights[0]
     if width == 0 or height == 0:
-        info_div.text = "Draw a rectangle on the map."
-        timeseries_src.data = dict(time=[], value=[])
+        info_div.text = "Draw a rectangle <br> on the map."
+        timeseries_src.data = dict(time=[], value=[], hidden = [])
+        cycleplot_src.data = dict(time=[], value=[])
+        trendbar_src.data = dict(time=[], value=[])
         return
 
     # Convert from center/width/height to box bounds (Web Mercator)
@@ -723,7 +859,9 @@ def on_box_change(attr, old, new):
         lon_mask = (lons >= min_lon) & (lons <= max_lon)
         if not lat_mask.any() or not lon_mask.any():
             info_div.text = "Box: no grid points in region!"
-            timeseries_src.data = dict(time=[], value=[])
+            timeseries_src.data = dict(time=[], value=[], hidden=[])
+            cycleplot_src.data = dict(time=[], value=[])
+            trendbar_src.data = dict(time=[], value=[])
             return
 
         # Get the spatial region
@@ -746,11 +884,44 @@ def on_box_change(attr, old, new):
         times = ds['valid_time'].values
         times = pd.to_datetime(times)
         values = avg_ts.values if hasattr(avg_ts, "values") else avg_ts
-        timeseries_src.data = dict(time=times, value=values)
-        ylabel = f"{variable_units_map.get(variable, '')}"
+        timeseries_src.data = dict(time=times, value=values, hidden=[False]*len(times) )
+
+
+
+        ylabel = f"{variable_units_map.get(variable)}"
+        times = ds['valid_time'].values
+        times = pd.to_datetime(times)
+
+
+        months = times.month
+        colors = [month_colors[m-1] for m in months]
+
+
+
+        
+        timeseries_src.data = dict(
+            time=times,
+            value=values,
+            hidden=[False]*len(times),
+            month=[month_names[m-1] for m in months],
+            color=[month_colors[m-1] for m in months],
+        )
+        for i, name in enumerate(month_names):
+            boolean_filters[i].booleans = [m == name for m in timeseries_src.data['month']]
+            
+        
+        
+
+        series = pd.Series(avg_ts, index=pd.to_datetime(times))
+        monthly_means = series.groupby(series.index.month).mean()
+        print(monthly_means)
+        print('series', series)
+        months_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
         timeseries_plot.yaxis.axis_label = ylabel
         x_min = times.min()
         x_max = times.max()
+        # After updating timeseries_src.data and after calculating y_min/y_max:
         if len(values) > 0 and np.any(np.isfinite(values)):
             y_min = np.nanmin(values)
             y_max = np.nanmax(values)
@@ -760,7 +931,70 @@ def on_box_change(attr, old, new):
 
         else:
             timeseries_plot.y_range = Range1d(start=0, end=1)
-            
+
+
+
+        # --- CYCLE PLOT AND TRENDBAR LOGIC ---
+        mode = mode_radio.active  # 0=hourly, 1=monthly
+
+        dt = pd.to_datetime(times)
+        avg_series = pd.Series(values, index=dt)
+
+        if mode == 1:  # Monthly
+            groupby_vals = dt.month
+            group_labels = months_names
+            group_colors = month_colors
+            group_range = range(0, 12)
+        else:
+            groupby_vals = dt.hour
+            group_labels = hour_labels
+            group_colors = hour_colors
+            group_range = range(24)
+
+        # -- cycle (mean per group)
+        means = []
+        for g in group_range:
+            vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+            means.append(np.nanmean(vals) if np.any(~np.isnan(vals)) else np.nan)
+        cycleplot_src.data = dict(time=group_labels, value=means)
+        cycleplot.x_range.factors = group_labels
+
+        mmin = np.nanmin(means)
+        mmax = np.nanmax(means)
+        cycleplot.y_range = Range1d(start=mmin, end=mmax)
+
+        # -- trend (slope per group)
+        trends = []
+        for g in group_range:
+            vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+            if len(vals) < 2 or np.all(np.isnan(vals)):
+                trends.append(np.nan)
+                continue
+            valid = ~np.isnan(vals)
+            if np.sum(valid) < 2:
+                trends.append(np.nan)
+                continue
+            t_sel = vals.index[valid]
+            t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
+            y_sel = vals.values[valid]
+            slope, *_ = linregress(t_num, y_sel)
+            trends.append(slope)
+
+        colorss = ['purple' if v >= 0 else 'orange' for v in trends]
+        trendbar_src.data = dict(time=group_labels, value=trends,colors=colorss)
+        trendbar.y_range.factors = group_labels[::-1]
+        mm = np.nanmax(np.abs(trends))
+        trendbar.x_range = Range1d(start=-mm-mm*0.01, end=mm+mm*0.01)
+        trendbar.title.text = f"Trend for the {len(group_labels)} {'hours' if mode == 0 else 'months'}"
+
+
+
+
+
+
+
+
+
         # Slope and p-value for the spatial mean
         mask = pd.notnull(values) & ~pd.isna(values)
         if np.sum(mask) > 2:
@@ -774,25 +1008,20 @@ def on_box_change(attr, old, new):
             pval = "--"
 
         info_div.text = (
-            f"Box: Lat [{min_lat:.3f}, {max_lat:.3f}], "
-            f"Lon [{min_lon:.3f}, {max_lon:.3f}] "
-            f"Slope: <b>{slope}</b> &nbsp;&nbsp; p-value: <b>{pval}</b>"
+            f"Box:<br>Lat [{min_lat:.3f}, {max_lat:.3f}], <br>"
+            f"Lon [{min_lon:.3f}, {max_lon:.3f}] <br>"
+            f"Slope: <b>{slope}</b> <br> p-value: <b>{pval}</b>"
         )
-
+        download_info.data = dict(
+            variable=[variable_select.value],
+            lat=[f"{min_lat:.3f}_{max_lat:.3f}"],
+            lon=[f"{min_lon:.3f}_{max_lon:.3f}"],
+        )
     except Exception as e:
         info_div.text = f"Box error: {e}"
-        timeseries_src.data = dict(time=[], value=[])
-
-def cusj():
-    num=1
-    return CustomJSHover(code=f"""
-    special_vars.indices = special_vars.indices.slice(0,{num})
-    return special_vars.indices.includes(special_vars.index) ? " " : " hidden "
-    """)
-def hovfun(tltl):
-    return """<div @hidden{custom} style="background-color: #343838; padding: 5px; border-radius: 15px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);">        
-    """+tltl+"""
-    </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f;} </style> """
+        timeseries_src.data = dict(time=[], value=[], hidden = [])
+        cycleplot_src.data = dict(time=[], value=[])
+        trendbar_src.data = dict(time=[], value=[])
 # ─── WIDGETS ─────────────────────────────────────
 data_error_div = Div(text="<pre>Waiting for Errors...</pre>", width=700, height=200, styles={ "background": "#11151c", "color": "#19ffe0", "font-family": "Consolas, monospace", "font-size": "1.06em", "margin-left": "32px", "border-radius": "12px", "box-shadow": "0 2px 16px #00ffe033", "overflow-y": "auto", "white-space": "pre-wrap", "padding": "8px 18px", 'margin-top': '30px' })
 date_time_display = Div(text="", width=340, height=32, stylesheets=[fancy_div_style])
@@ -818,43 +1047,119 @@ palette_select = Select( title="Colormap", value="viridis", options=["viridis", 
 min_input = TextInput(title="min", value="0", width=80,stylesheets=[style2])
 max_input = TextInput(title="max", value="1", width=80,stylesheets=[style2])
 stats_div = Div(text=" ", width=300, height=65, styles={"font-size": "1.2em", "color": "#00ffe0"},stylesheets=[style2])
-info_div = Div( text="Lat: --  Lon: --  Slope: --  p-value: --", width=1050, height=30, styles={"font-size": "1.9em", "color": "#00ffe0", "margin": "4px","margin-left": "-120px"} )
+info_div = Div( text="Lat: -- <br>Lon: -- <br>Slope: -- <br>p-value: --", width=300, height=30, styles={"font-size": "1.2em", "color": "#00ffe0", "margin": "4px","margin-left": "10px"} )
 variable_select = Select( title="Variable", value="total_precipitation", options=era5_variables, stylesheets=[style2] )
 play_button = Button(label="Play ▶️", button_type="primary", width=100, stylesheets=[style3])
 date_time_display = Div(text="", width=420, height=30, styles = {"font-size": "20px", "font-family": "Consolas, 'Courier New', monospace", "color": "#00ffe0",})
-start_picker = DatePicker(title="Start Date", value="2025-04-08", min_date="1984-01-01",stylesheets=[style2],width=130)
-end_picker   = DatePicker(title="End Date",   value="2025-04-09", min_date="1984-01-01",stylesheets=[style2],width=130)
+start_picker = TextInput(title="Start Date", value="2023-01-01", width=130, stylesheets=[style2])
+end_picker = TextInput(title="End Date", value="2025-06-01", width=130, stylesheets=[style2])
+
 start_ts = datepicker_str_to_utc_ts(start_picker.value)
 end_ts = datepicker_str_to_utc_ts_end_of_day(end_picker.value)
 hour_slider = Slider( title="Date & Time", start=int(start_ts), end=int(end_ts+ 24*60*60*1000), value=int(start_ts), step=3600*1000, stylesheets=[slider_style] )
-button = Button(label="▶️ Load ERA5 data", button_type="success", width=260,stylesheets=[style])
+button = Button(label="▶️ Load ERA5 data", button_type="success", width=200,stylesheets=[style],styles = {'margin-top': '0px'})
 date_multichoice = MultiChoice( title="Select Date/Time (UTC)", options=[], value=[], width=260, max_items=1, stylesheets=[multi_style] )
 
 
 # ─── PLOTS ─────────────────────────────────────
 
 # 1.
-timeseries_src = ColumnDataSource(data=dict(time=[], value=[]))
-timeseries_plot = figure(tools="pan,reset,box_zoom,save",
+timeseries_src = ColumnDataSource(data=dict(time=[], value=[], month = [], color = [], hidden=[]))
+
+
+# Set up the figure
+timeseries_plot = figure(
+    tools="pan,reset,box_zoom,save",
     x_axis_type='datetime',
-    width=1600, height=250,
-    title="Timeseries at selected location",
+    width=800, height=300,
     background_fill_color="#343838",
-    border_fill_color="#343838", styles = {'margin-left': '-340px',},
+    border_fill_color="#343838",
+    # styles={'margin-left': '-340px'},
 )
-timeseries_plot.line('time', 'value', source=timeseries_src, line_width=2, color="orange")
+
+# Add grey timeseries line (behind points)
+tt = timeseries_plot.line('time', 'value', source=timeseries_src, line_width=1, color="grey")
+
+# --- Add colored scatter points per month, with legend ---
+from bokeh.models import CDSView, BooleanFilter
+scatter_renderers = []
+boolean_filters = []
+for name, color in zip(month_names, month_colors):
+    mask = [m == name for m in timeseries_src.data['month']]
+    boolean_filter = BooleanFilter(mask)
+    view = CDSView(filter=boolean_filter)
+    r = timeseries_plot.scatter('time', 'value', source=timeseries_src,
+                               color=color, size=6, view=view, legend_label=name)
+    scatter_renderers.append(r)
+    boolean_filters.append(boolean_filter)
+
+# -- Axes and grid styling --
 timeseries_plot.xaxis.axis_label = 'Time'
 timeseries_plot.yaxis.axis_label = 'Value'
 timeseries_plot.xgrid.grid_line_color = "#3c3c3c"
 timeseries_plot.ygrid.grid_line_color = "#3c3c3c"
-custom_tooltip = """ <div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);"> <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;"> 🕒 @time{%F %H:%M} <br> <b>Value:</b> @value{0.0000000} </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f; } </style> """
-timeseries_plot.add_tools(HoverTool( tooltips=custom_tooltip, formatters={'@time': 'datetime'}, mode='vline', point_policy='snap_to_data' ))
-scatter_renderer = timeseries_plot.scatter('time', 'value', source=timeseries_src, size=9, line_color = 'black', color="orange", alpha=0.85)
-scatter_taptool = TapTool(renderers=[scatter_renderer])
+
+# --- HoverTool for line (tt) ---
+custom_tooltip = """🕒 @time{%F %H:%M} <br> <b>Value:</b> @value{0.0000000} """
+# If you have a custom hover function, use it, else just:
+timeseries_plot.add_tools(HoverTool(
+    tooltips=hovfun(custom_tooltip),
+    formatters={'@time': 'datetime'},
+    mode='vline',
+    point_policy='snap_to_data',
+    line_policy="none",
+    attachment="above",show_arrow=False,
+    renderers=[tt]
+))
+
+# --- TapTool for scatter points ---
+scatter_taptool = TapTool(renderers=scatter_renderers)
 timeseries_plot.add_tools(scatter_taptool)
+
+# --- Wheel zoom only in x-direction ---
 wheel_zoom_x = WheelZoomTool(dimensions='width')
 timeseries_plot.add_tools(wheel_zoom_x)
 timeseries_plot.toolbar.active_scroll = wheel_zoom_x
+
+# --- Legend setup ---
+timeseries_plot.legend.orientation = "horizontal"
+timeseries_plot.legend.location = "top_center"
+timeseries_plot.legend.label_text_font_size = '9pt'
+timeseries_plot.add_layout(timeseries_plot.legend[0], 'below')
+timeseries_plot.legend.click_policy = "hide"
+
+
+
+
+# 1b) annual cycle
+
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+# 1.
+cycleplot_src = ColumnDataSource(data=dict(time=[], value=[]))
+cycleplot = figure(tools="pan,reset,box_zoom,save",x_range=months,
+    # x_axis_type='datetime',
+    width=450, height=300,
+    title="Cycle",
+    background_fill_color="#343838",
+    border_fill_color="#343838", styles = {'margin-left': '0px',},
+)
+cycleplot.vbar(x = 'time', top = 'value', source=cycleplot_src, width=0.9, line_color = 'black', hover_fill_color= 'yellow',color="deepskyblue")
+cycleplot.xaxis.axis_label = 'Time'
+cycleplot.yaxis.axis_label = 'Value'
+cycleplot.xgrid.grid_line_color = "#3c3c3c"
+cycleplot.ygrid.grid_line_color = "#3c3c3c"
+custom_tooltip = """ <div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);"> <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;"> 🕒 @time <br> <b>Value:</b> @value{0.0000000} </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f; } </style> """
+cycleplot.add_tools(HoverTool( tooltips=custom_tooltip, mode='vline', point_policy='snap_to_data',attachment="above", show_arrow=False))
+# scatter_rendererq = cycleplot.scatter('time', 'value', source=cycleplot_src, size=9, line_color = 'black', color="orange", alpha=0.85)
+# scatter_taptoolq = TapTool(renderers=[scatter_rendererq])
+# cycleplot.add_tools(scatter_taptoolq)
+cycleplot.xaxis.major_label_orientation = 0.6  # in radians (~34 degrees)
+
+
+
+cross_source = ColumnDataSource(data=dict(x=[], y=[]))
+
 
 
 # 2.
@@ -868,9 +1173,10 @@ x1, y1 = transformer.transform(36, 46)
 p = figure(
     x_axis_type="mercator", y_axis_type="mercator",
     x_range=(x0, x1), y_range=(y0, y1),
-    width=1600, height=500,
+    width=800, height=450,
     title="ERA5",
-    tools="pan,wheel_zoom,reset",active_drag="pan", active_scroll="wheel_zoom",background_fill_color="#343838",border_fill_color="#343838",styles = {'margin-left': '-330px'}
+    tools="pan,wheel_zoom,reset",active_drag="pan", active_scroll="wheel_zoom",background_fill_color="#343838",border_fill_color="#343838",
+    # styles = {'margin-left': '-330px'}
 )
 p.title.text_color = "white"
 p.add_tile(xyz.OpenStreetMap.Mapnik)
@@ -942,12 +1248,85 @@ hover = HoverTool(
         "$x": merc_x_to_lon,
         "$y": merc_y_to_lat,
     },
-    point_policy='snap_to_data', renderers = [image_renderer],
+    point_policy='snap_to_data', renderers = [image_renderer],attachment="above",show_arrow=False,
 )
 p.add_tools(hover)
 
+p.scatter(x='x', y='y', source=cross_source, marker='+', size=20, color='red', line_width=2)
+
+
+# 2B)
+
+
+# 1b) annual cycle
+
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+# 1.
+trendbar_src = ColumnDataSource(data=dict(time=[], value=[], colors=[]))
+# trendbar_src.data['time_str'] = [t.strftime('%Y-%m-%d %H:%M') for t in trendbar_src.data['time']]
+
+# 2. Create the line figure
+trendbar = figure(y_range=months[::-1],
+    tools="pan,reset,box_zoom,save",
+    # x_axis_type='datetime',
+    width=450, height=450,
+    title="Trend for the 12 months of the year.",
+    background_fill_color="#343838",
+    border_fill_color="#343838",
+    # styles={'margin-left': '-340px',}
+)
+
+# 3. Draw the line
+trendbar.hbar(y = 'time', right = 'value', source=trendbar_src, height=0.9, color="colors",border_radius=5, line_color = 'black', hover_fill_color= 'lime',)
+
+# 4. Axis labels
+trendbar.xaxis.axis_label = 'Value'
+trendbar.yaxis.axis_label = 'Time'
+
+# 5. Grid styling
+trendbar.xgrid.grid_line_color = "#3c3c3c"
+trendbar.ygrid.grid_line_color = "#3c3c3c"
+# Add "legend only" bars at e.g. 'Jan', with zero length, fully transparent.
+trendbar.hbar(y=['Jan'], right=[float('nan')], height=0.8, color='purple', legend_label='+')
+trendbar.hbar(y=['Jan'], right=[float('nan')], height=0.8, color='orange', legend_label='–')
+
+trendbar.legend.orientation = "vertical"
+trendbar.legend.location = "top_left"
+trendbar.legend.label_text_font_size = '11pt'
+trendbar.legend.click_policy = "hide"
+trendbar.xaxis.major_label_orientation = 0.8  # in radians (~34 degrees)
+
+# 6. Custom tooltip
+custom_tooltip = """
+<div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);">
+  <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;">
+    🕒 @time <br>
+    <b>Value:</b> @value{0.0000000}
+  </font>
+</div>
+<style>
+  :host {
+    --tooltip-border: transparent;
+    --tooltip-color: transparent;
+    --tooltip-text: #2f2f2f;
+  }
+</style>
+"""
+
+trendbar.add_tools(
+    HoverTool(
+        tooltips=custom_tooltip,attachment="above",show_arrow=False,
+        point_policy='snap_to_data'
+    )
+)
+
 # ─── CALLBACKS ─────────────────────────────────────
+mode_radio.active = 1
+
 mode_radio.on_change('active', on_mode_change)
+cycleplot.on_event('tap', on_timeseries_tap2)
+trendbar.on_event('tap', on_timeseries_tap2)
 
 timeseries_plot.on_event('tap', on_timeseries_tap)
 button.on_click(on_click)
@@ -1038,8 +1417,10 @@ controls = column(
     stylesheets=[gstyle]
 )
 
-layout = row(column(column(row(logo_div,column(date_time_display, stats_div)), mode_radio),controls),div2,column(button,styles = {'margin-top': '30px'}),stylesheets=[gstyle])
+layout = row(column(column(row(logo_div,column(date_time_display, stats_div)), row(mode_radio,info_div)),controls),div2,column(button,styles = {'margin-top': '30px'}),stylesheets=[gstyle])
 doc = curdoc()
 doc.title = "ERMES"
+
+
 doc.add_root(column( layout, row(column(about_div, era5_div, infdiv),notes_textarea,data_error_div), stylesheets=[gstyle] ))
 update_slider_range(None, None, None)
