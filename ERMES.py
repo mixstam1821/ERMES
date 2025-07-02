@@ -1,4 +1,5 @@
 # ERMES.py
+# PLEASE USE YOUR API KEY!!
 
 # ─── IMPORTS ─────────────────────────────────────
 import numpy as np
