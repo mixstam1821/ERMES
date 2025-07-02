@@ -202,7 +202,7 @@ def update_image(attr, old, new):
     if not hasattr(doc, "_ds"):
         return
     ds = doc._ds.sortby('latitude')
-    print(ds)
+    # print(ds)
     variable = variable_select.value
 
     hr = hour_slider.value
@@ -226,14 +226,14 @@ def update_image(attr, old, new):
         date_multichoice.value = [time_str_short]
 
 
-    print('---',time_str)
+    # print('---',time_str)
 
     # varname = "tp" if variable == "total_precipitation" else "t2m"
     variable = variable_select.value
     varname = variable_netcdf_map.get(variable, variable)
     da = ds.sel(valid_time=time_str, method="nearest")[varname]
     # da = ds.sel(valid_time=time_str, method="nearest")[varname]
-    print(da.max())
+    # print(da.max())
     # da = da.where(da != 0)
     color_bar.title = f"{variable} [{variable_units_map.get(variable)}]"
 
@@ -469,8 +469,8 @@ def on_map_tap(event):
 
     series = pd.Series(avg_ts, index=pd.to_datetime(times))
     monthly_means = series.groupby(series.index.month).mean()
-    print(monthly_means)
-    print('series', series)
+    # print(monthly_means)
+    # print('series', series)
     months_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
     timeseries_plot.yaxis.axis_label = ylabel
@@ -915,8 +915,8 @@ def on_box_change(attr, old, new):
 
         series = pd.Series(avg_ts, index=pd.to_datetime(times))
         monthly_means = series.groupby(series.index.month).mean()
-        print(monthly_means)
-        print('series', series)
+        # print(monthly_means)
+        # print('series', series)
         months_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
         timeseries_plot.yaxis.axis_label = ylabel
