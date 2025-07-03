@@ -14,7 +14,7 @@ ERMES is an advanced interactive explorer for ERA5 reanalysis data, built in Pyt
 - Trends for the 12 months of the year or the 24 hours of the day added!
 - When you click on map, a red cross appear to track the click point.
 - Timeseries for the deseasonalized anomalies for monthly data are available with low pass filtered (Savitzky-Golay filter) data.
-
+- Easier rectangular selection by selecting the rectangle in the toolbar and dragging with mouse click in the region you want. With a double click on the rect, it will be removed.
 ![Alt text](assets/Screenshot_20250703_042008.png)
 ![Alt text](assets/Screenshot_20250703_042909.png)
 ![Alt text](assets/Screenshot_20250703_043311.png)
