@@ -773,7 +773,7 @@ def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lo
     # client = cdsapi.Client()
     client = cdsapi.Client(
     url="https://cds.climate.copernicus.eu/api",
-    key="b687714d-b7ab-4621-b4fc-91bf042ed0fe",  #"73c6526b-1f98-4d5e-80e2-7ce7c393ff20",
+    key="73c6526b-1f98-4d5e-80e2-7ce7c393ff20",  
     verify=0
 )
     # Choose dataset and request parameters based on mode
