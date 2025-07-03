@@ -1,5 +1,4 @@
 # ERMES.py
-# PLEASE USE YOUR API KEY!!
 
 # ─── IMPORTS ─────────────────────────────────────
 import numpy as np
@@ -14,17 +13,19 @@ from scipy.interpolate import RegularGridInterpolator
 import xyzservices.providers as xyz
 import datetime
 from scipy.stats import linregress
+from scipy.signal import savgol_filter
 
 from bokeh.plotting import figure
 from bokeh.palettes import viridis, inferno, plasma, cividis, magma, turbo
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
-from bokeh.models import (
+from bokeh.models import (TabPanel, Tabs,Span,CrosshairTool,BoxSelectTool,
     ColumnDataSource, DatePicker, Slider, Button,
     LinearColorMapper, ColorBar, Div,
     TextInput, Button, InlineStyleSheet,GlobalInlineStyleSheet,
     Select,HoverTool,TapTool,MultiChoice, RadioButtonGroup,WheelZoomTool, TextAreaInput,Range1d, CustomJSHover,CustomJS,BoxEditTool
 )
+from bokeh import events
 
 # ─── SOME INITIALS ─────────────────────────────────────
 curdoc().theme = 'dark_minimal'
@@ -175,6 +176,7 @@ hour_colors = [
     "#e78ac3", "#a6d854", "#ffd92f", "#e5c494", "#b3b3b3", "#1b9e77",
     "#d95f02", "#7570b3", "#e7298a", "#66a61e", "#e6ab02", "#a6761d"
 ]
+months_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 # ─── CSS ─────────────────────────────────────
 
@@ -194,10 +196,24 @@ base_variables = """ :host { /* CSS Custom Properties for easy theming */ --prim
 textarea_style  = InlineStyleSheet(css=base_variables + """ :host textarea { background: var(--surface-color) !important; color: var(--text-color) !important; border: 1px solid var(--border-color) !important; border-radius: 6px !important; padding: 10px 12px !important; font-size: 14px !important; font-family: inherit !important; transition: all 0.2s ease !important; resize: vertical !important; } :host textarea:focus { outline: none !important; border-color: var(--primary-color) !important; box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important; } :host textarea::placeholder { color: #9ca3af !important; opacity: 0.7 !important; } """)
 fancy_div_style = InlineStyleSheet(css=""" :host  { background: linear-gradient(90deg, #232b33 80%, #25224c 100%); color: #f1faee; font-family: Consolas, monospace; font-size: 1.13em; padding: 13px 16px; border-radius: 14px; box-shadow: 0 3px 16px #00ffe033; margin-bottom: 8px; margin-top: 7px; text-align: center; letter-spacing: 0.6px; font-weight: bold; line-height: 1.4; } """)
 fancy_div_style2 = InlineStyleSheet(css=""" :host { position: relative; background: #343838; color: #fff; border-radius: 16px; padding: 18px 28px; text-align: center; overflow: hidden; box-shadow: 0 6px 18px red; margin: 28px auto; } """)
+tabs_style = InlineStyleSheet(css=""" /* Main tabs container */ :host { background: #343838 !important; border-radius: 14px !important; padding: 8px !important; margin: 10px !important; box-shadow: 0 6px 18px red, 0 2px 10px rgba(0, 0, 0, 0.3) !important; border: 1px solid rgba(0, 191, 255, 0.3) !important; } /* Tab navigation bar */ :host .bk-tabs-header { background: transparent !important; border-bottom: 2px solid #00bfff !important; margin-bottom: 8px !important; } /* Individual tab buttons */ :host .bk-tab { background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%) !important; color: #00bfff !important; border: 1px solid #555 !important; border-radius: 8px 8px 0 0 !important; padding: 12px 20px !important; margin-right: 4px !important; font-family: 'Arial', sans-serif !important; font-weight: 600 !important; font-size: 0.95em !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; position: relative !important; overflow: hidden !important; } /* Tab hover effect */ :host .bk-tab:hover { background: linear-gradient(135deg, #dc1cdd 0%, #ff1493 100%) !important; color: #ffffff !important; border-color: #dc1cdd !important; box-shadow: 0 4px 15px rgba(220, 28, 221, 0.5) !important; transform: translateY(-2px) !important; } /* Active tab styling */ :host .bk-tab.bk-active { background: linear-gradient(135deg, #00bfff 0%, #0080ff 100%) !important; color: #000000 !important; border-color: #00bfff !important; box-shadow: 0 4px 20px rgba(0, 191, 255, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.3) !important; transform: translateY(-1px) !important; font-weight: 700 !important; } /* Active tab glow effect */ :host .bk-tab.bk-active::before { content: '' !important; position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%) !important; animation: shimmer 2s infinite !important; } @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } } /* Tab content area */ :host .bk-tab-content { background: transparent !important; padding: 16px !important; border-radius: 0 0 10px 10px !important; } /* Focus states for accessibility */ :host .bk-tab:focus { outline: 2px solid #00bfff !important; outline-offset: 2px !important; } /* Disabled tab state */ :host .bk-tab:disabled { background: #1a1a1a !important; color: #666 !important; cursor: not-allowed !important; opacity: 0.5 !important; } """)
 
 # ─── FUNCTIONS ─────────────────────────────────────
 
-
+def get_valid_savgol_window(window, order, npts):
+    # Ensure window is odd and at most npts
+    window = min(window, npts)
+    if window % 2 == 0:
+        window -= 1
+    if window < order + 2:
+        window = order + 2
+        if window % 2 == 0:
+            window += 1
+    if window > npts:
+        window = npts if npts % 2 == 1 else npts - 1
+    if window < 3 or window > npts:
+        return None  # Not enough points for filtering
+    return window
 def update_image(attr, old, new):
     if not hasattr(doc, "_ds"):
         return
@@ -447,6 +463,7 @@ def on_map_tap(event):
     times = ds['valid_time'].values
     times = pd.to_datetime(times)
 
+    mode = mode_radio.active  # 0=hourly, 1=monthly
 
     months = times.month
     colors = [month_colors[m-1] for m in months]
@@ -486,19 +503,98 @@ def on_map_tap(event):
 
     else:
         timeseries_plot.y_range = Range1d(start=0, end=1)
-    # --- Fill info_div ---
-    lat_disp = f"{lat:.4f}"
-    lon_disp = f"{lon:.4f}"
-    mask = np.isfinite(values)
-    if np.sum(mask) > 2:
-        y = values[mask]
-        x = np.arange(len(y))
-        result = linregress(x, y)
-        slope = f"{result.slope:.4g}"
-        pval = f"{result.pvalue:.3g}"
+
+
+
+
+
+
+
+
+
+    if mode ==1:
+
+
+
+        # anomalies
+        avg_ts = da
+
+        series = pd.Series(avg_ts, index=pd.to_datetime(times))
+
+        df = pd.DataFrame({'value': values}, index=times)
+        monthly_means = df.groupby(df.index.month)['value'].transform('mean')
+        avalues = df['value'] - monthly_means
+
+        npts = len(avalues)
+        order=3
+        window=121
+        window = get_valid_savgol_window(window, order, npts)
+        if window is not None and npts >= window:
+            try:
+                afiltered = savgol_filter(np.nan_to_num(avalues, nan=0.0), window, order)
+            except Exception as e:
+                afiltered = avalues
+        else:
+            afiltered = avalues  # Not enough points to filter
+
+        atimeseries_src.data = dict(
+            time=times,
+            avalue=avalues,afiltered=afiltered,
+            hidden=[False]*len(times),
+            month=[month_names[m-1] for m in months],
+            color=[month_colors[m-1] for m in months],
+        )
+        for i, name in enumerate(month_names):
+            aboolean_filters[i].booleans = [m == name for m in atimeseries_src.data['month']]
+            
+
+
+        atimeseries_plot.yaxis.axis_label = ylabel
+        x_min = times.min()
+        x_max = times.max()
+        # After updating timeseries_src.data and after calculating y_min/y_max:
+        if len(avalues) > 0 and np.any(np.isfinite(avalues)):
+            y_min = np.nanmin(avalues)
+            y_max = np.nanmax(avalues)
+            y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
+            xx = np.maximum(np.abs(y_min) ,np.abs(y_max))
+            atimeseries_plot.y_range = Range1d(start=-xx, end=xx)
+            atimeseries_plot.x_range = Range1d(start=x_min, end=x_max)
+
+        else:
+            atimeseries_plot.y_range = Range1d(start=-1, end=1)
+
+
+        # --- Fill info_div ---
+        lat_disp = f"{lat:.4f}"
+        lon_disp = f"{lon:.4f}"
+        mask = np.isfinite(avalues)
+        if np.sum(mask) > 2:
+            y = avalues[mask]
+            x = np.arange(len(y))
+            result = linregress(x, y)
+            slope = f"{result.slope:.4g}"
+            pval = f"{result.pvalue:.3g}"
+        else:
+            slope = "--"
+            pval = "--"
     else:
-        slope = "--"
-        pval = "--"
+
+        atimeseries_src.data = dict(times=[],avalue=[],afiltered=[],hidden=[],month=[],color=[])
+
+        # --- Fill info_div ---
+        lat_disp = f"{lat:.4f}"
+        lon_disp = f"{lon:.4f}"
+        mask = np.isfinite(values)
+        if np.sum(mask) > 2:
+            y = values[mask]
+            x = np.arange(len(y))
+            result = linregress(x, y)
+            slope = f"{result.slope:.4g}"
+            pval = f"{result.pvalue:.3g}"
+        else:
+            slope = "--"
+            pval = "--"
 
     info_div.text = (
         f"Lat: <b>{lat_disp}</b> <br>Lon: <b>{lon_disp}</b><br>"
@@ -514,11 +610,9 @@ def on_map_tap(event):
 
 
     # --- CYCLE PLOT AND TRENDBAR LOGIC ---
-    mode = mode_radio.active  # 0=hourly, 1=monthly
 
     dt = pd.to_datetime(times)
     avg_series = pd.Series(values, index=dt)
-
     if mode == 1:  # Monthly
         groupby_vals = dt.month
         group_labels = months_names
@@ -543,21 +637,42 @@ def on_map_tap(event):
     cycleplot.y_range = Range1d(start=mmin, end=mmax)
 
     # -- trend (slope per group)
-    trends = []
-    for g in group_range:
-        vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
-        if len(vals) < 2 or np.all(np.isnan(vals)):
-            trends.append(np.nan)
-            continue
-        valid = ~np.isnan(vals)
-        if np.sum(valid) < 2:
-            trends.append(np.nan)
-            continue
-        t_sel = vals.index[valid]
-        t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
-        y_sel = vals.values[valid]
-        slope, *_ = linregress(t_num, y_sel)
-        trends.append(slope)
+
+    if mode ==0:
+        trends = []
+        for g in group_range:
+            vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+            if len(vals) < 2 or np.all(np.isnan(vals)):
+                trends.append(np.nan)
+                continue
+            valid = ~np.isnan(vals)
+            if np.sum(valid) < 2:
+                trends.append(np.nan)
+                continue
+            t_sel = vals.index[valid]
+            t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
+            y_sel = vals.values[valid]
+            slope, *_ = linregress(t_num, y_sel)
+            trends.append(slope)
+    else:
+        avg_series = pd.Series(avalues, index=dt)
+        # print('aavg', avg_series)
+
+        trends = []
+        for g in group_range:
+            vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+            if len(vals) < 2 or np.all(np.isnan(vals)):
+                trends.append(np.nan)
+                continue
+            valid = ~np.isnan(vals)
+            if np.sum(valid) < 2:
+                trends.append(np.nan)
+                continue
+            t_sel = vals.index[valid]
+            t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
+            y_sel = vals.values[valid]
+            slope, *_ = linregress(t_num, y_sel)
+            trends.append(slope)
 
     colorss = ['purple' if v >= 0 else 'orange' for v in trends]
     trendbar_src.data = dict(time=group_labels, value=trends,colors=colorss)
@@ -658,7 +773,7 @@ def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lo
     # client = cdsapi.Client()
     client = cdsapi.Client(
     url="https://cds.climate.copernicus.eu/api",
-    key="73c6526b-1f98-4d5e-80e2-7ce7c393ff20",
+    key="b687714d-b7ab-4621-b4fc-91bf042ed0fe",  #"73c6526b-1f98-4d5e-80e2-7ce7c393ff20",
     verify=0
 )
     # Choose dataset and request parameters based on mode
@@ -791,7 +906,14 @@ def poll_job_status():
     if is_job_done() == 1:
         for p in plots:
             p.visible = True
-        layout.children[2] = column(column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button, row(column(plots[0], stylesheets=[fancy_div_style2],styles = {'margin-left': '-400px','margin-top': '3px'}), column(trendbar, stylesheets=[fancy_div_style2],styles = {'margin-left': '20px','margin-top': '0px'})), row(column(timeseries_plot, stylesheets=[fancy_div_style2],styles = {'margin-left': '-400px','margin-top': '0px'}),column(cycleplot, stylesheets=[fancy_div_style2],styles = {'margin-left': '20px','margin-top': '0px'}))
+        layout.children[2] = column(column(Div(text="", width=0, height=0),styles = {'margin-top': '20px'}),button, row(column(plots[0], stylesheets=[fancy_div_style2],styles = {'margin-left': '-400px','margin-top': '3px'}), column(trendbar, stylesheets=[fancy_div_style2],styles = {'margin-left': '20px','margin-top': '0px'})), row(column(
+            
+            # timeseries_plot, 
+            Tabs(tabs=[
+    TabPanel(child=column(timeseries_plot,), title="Timeseries"),
+    TabPanel(child=column(atimeseries_plot,), title="Anomalies"),
+], stylesheets=[tabs_style], styles={'width':'820px'},),styles = {'margin-left': '-400px','margin-top': '-10px'}),
+            column(cycleplot, stylesheets=[fancy_div_style2],styles = {'margin-left': '20px','margin-top': '0px'}), )
                                     )
     else:
         curdoc().add_timeout_callback(poll_job_status, 1)
@@ -809,220 +931,319 @@ def get_month_starts(start_date, end_date):
     months = pd.date_range(start, end, freq='MS')  # Month start
     return [int(m.timestamp()*1000) for m in months]  # as ms since epoch
 
-def on_box_change(attr, old, new):
+def on_box_change(event):
     # Only proceed if there's at least one box with nonzero size
-    xs = boxes_source.data.get('x', [])
-    ys = boxes_source.data.get('y', [])
-    widths = boxes_source.data.get('width', [])
-    heights = boxes_source.data.get('height', [])
-    if len(xs) == 0 or widths[0] == 0 or heights[0] == 0:
-        info_div.text = "Draw a rectangle <br> on the map."
-        timeseries_src.data = dict(time=[], value=[], hidden=[] )
-        cycleplot_src.data = dict(time=[], value=[])
-        trendbar_src.data = dict(time=[], value=[])
-        return
+    # xs = boxes_source.data.get('x', [])
+    # ys = boxes_source.data.get('y', [])
+    # widths = boxes_source.data.get('width', [])
+    # heights = boxes_source.data.get('height', [])
+    # if len(xs) == 0 or widths[0] == 0 or heights[0] == 0:
+    #     info_div.text = "Draw a rectangle <br> on the map."
+    #     timeseries_src.data = dict(time=[], value=[], hidden=[] )
+    #     atimeseries_src.data = dict(time=[], value=[], hidden=[] )
 
-    # Take the first box (since num_objects=1)
-    x_center = xs[0]
-    y_center = ys[0]
-    width = widths[0]
-    height = heights[0]
-    if width == 0 or height == 0:
-        info_div.text = "Draw a rectangle <br> on the map."
-        timeseries_src.data = dict(time=[], value=[], hidden = [])
-        cycleplot_src.data = dict(time=[], value=[])
-        trendbar_src.data = dict(time=[], value=[])
-        return
+    #     cycleplot_src.data = dict(time=[], value=[])
+    #     trendbar_src.data = dict(time=[], value=[])
+    #     return
 
-    # Convert from center/width/height to box bounds (Web Mercator)
-    x0 = x_center - width/2
-    x1 = x_center + width/2
-    y0 = y_center - height/2
-    y1 = y_center + height/2
+    # # Take the first box (since num_objects=1)
+    # x_center = xs[0]
+    # y_center = ys[0]
+    # width = widths[0]
+    # height = heights[0]
+    # if width == 0 or height == 0:
+    #     info_div.text = "Draw a rectangle <br> on the map."
+    #     timeseries_src.data = dict(time=[], value=[], hidden = [])
+    #     atimeseries_src.data = dict(time=[], value=[], hidden = [])
 
-    # Convert box corners to lon/lat
-    lon0, lat0 = transformer.transform(x0, y0, direction='INVERSE')
-    lon1, lat1 = transformer.transform(x1, y1, direction='INVERSE')
-    min_lat, max_lat = min(lat0, lat1), max(lat0, lat1)
-    min_lon, max_lon = min(lon0, lon1), max(lon0, lon1)
-    doc._current_box_latlon = (min_lat, max_lat, min_lon, max_lon)
-    box_bounds_div.text = f"box,{min_lat},{max_lat},{min_lon},{max_lon}"
+    #     cycleplot_src.data = dict(time=[], value=[])
+    #     trendbar_src.data = dict(time=[], value=[])
+    #     return
+    if event.__dict__['geometry']['type'] == 'rect':
+        mie = event.__dict__['geometry']
+        if "x0" not in mie:
+            x0 = mie["x"]
+            x1 = mie["x"]
+            y0 = mie["y"]
+            y1 = mie["y"]
+        else:    
+            x0 = mie["x0"]
+            x1 = mie["x1"]
+            y0 = mie["y0"]
+            y1 = mie["y1"]    
 
-    # Fetch and mask the variable data
-    try:
-        ds = doc._ds
-        variable = variable_select.value
-        varname = variable_netcdf_map.get(variable, variable)
-        lats = ds.latitude.values
-        lons = ds.longitude.values
+        # Convert from center/width/height to box bounds (Web Mercator)
+        # x0 = x_center - width/2
+        # x1 = x_center + width/2
+        # y0 = y_center - height/2
+        # y1 = y_center + height/2
 
-        lat_mask = (lats >= min_lat) & (lats <= max_lat)
-        lon_mask = (lons >= min_lon) & (lons <= max_lon)
-        if not lat_mask.any() or not lon_mask.any():
-            info_div.text = "Box: no grid points in region!"
-            timeseries_src.data = dict(time=[], value=[], hidden=[])
-            cycleplot_src.data = dict(time=[], value=[])
-            trendbar_src.data = dict(time=[], value=[])
-            return
-
-        # Get the spatial region
-
-        arr = ds[varname][:, lat_mask, :][:, :, lon_mask]
-        lats_sub = ds.latitude.values[lat_mask]
-        # Compute weights: shape (n_lats, 1)
-        weights = np.cos(np.deg2rad(lats_sub)).reshape(-1, 1)
-        weights = weights / weights.sum()  # normalize so sum=1
-
-        # Weighted average for each timestep
-        # arr: shape (time, n_lats, n_lons)
-        # weights: (n_lats, 1), will broadcast over n_lons
-        weighted = arr * weights  # shape (time, n_lats, n_lons)
-        avg_ts = np.nansum(weighted, axis=(1,2)) / np.nansum(~np.isnan(arr) * weights, axis=(1,2))
-
-        # Update timeseries plot
-
-        # Times and values
-        times = ds['valid_time'].values
-        times = pd.to_datetime(times)
-        values = avg_ts.values if hasattr(avg_ts, "values") else avg_ts
-        timeseries_src.data = dict(time=times, value=values, hidden=[False]*len(times) )
-
-
-
-        ylabel = f"{variable_units_map.get(variable)}"
-        times = ds['valid_time'].values
-        times = pd.to_datetime(times)
-
-
-        months = times.month
-        colors = [month_colors[m-1] for m in months]
-
-
-
-        
-        timeseries_src.data = dict(
-            time=times,
-            value=values,
-            hidden=[False]*len(times),
-            month=[month_names[m-1] for m in months],
-            color=[month_colors[m-1] for m in months],
-        )
-        for i, name in enumerate(month_names):
-            boolean_filters[i].booleans = [m == name for m in timeseries_src.data['month']]
-            
-        
-        
-
-        series = pd.Series(avg_ts, index=pd.to_datetime(times))
-        monthly_means = series.groupby(series.index.month).mean()
-        # print(monthly_means)
-        # print('series', series)
-        months_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-        timeseries_plot.yaxis.axis_label = ylabel
-        x_min = times.min()
-        x_max = times.max()
-        # After updating timeseries_src.data and after calculating y_min/y_max:
-        if len(values) > 0 and np.any(np.isfinite(values)):
-            y_min = np.nanmin(values)
-            y_max = np.nanmax(values)
-            y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
-            timeseries_plot.y_range = Range1d(start=y_min - y_pad, end=y_max + y_pad)
-            timeseries_plot.x_range = Range1d(start=x_min, end=x_max)
-
-        else:
-            timeseries_plot.y_range = Range1d(start=0, end=1)
-
-
-
-        # --- CYCLE PLOT AND TRENDBAR LOGIC ---
+        # Convert box corners to lon/lat
+        lon0, lat0 = transformer.transform(x0, y0, direction='INVERSE')
+        lon1, lat1 = transformer.transform(x1, y1, direction='INVERSE')
+        min_lat, max_lat = min(lat0, lat1), max(lat0, lat1)
+        min_lon, max_lon = min(lon0, lon1), max(lon0, lon1)
+        doc._current_box_latlon = (min_lat, max_lat, min_lon, max_lon)
+        box_bounds_div.text = f"box,{min_lat},{max_lat},{min_lon},{max_lon}"
         mode = mode_radio.active  # 0=hourly, 1=monthly
 
-        dt = pd.to_datetime(times)
-        avg_series = pd.Series(values, index=dt)
+        # Fetch and mask the variable data
+        try:
+            ds = doc._ds
+            variable = variable_select.value
+            varname = variable_netcdf_map.get(variable, variable)
+            lats = ds.latitude.values
+            lons = ds.longitude.values
 
-        if mode == 1:  # Monthly
-            groupby_vals = dt.month
-            group_labels = months_names
-            group_colors = month_colors
-            group_range = range(0, 12)
-        else:
-            groupby_vals = dt.hour
-            group_labels = hour_labels
-            group_colors = hour_colors
-            group_range = range(24)
+            lat_mask = (lats >= min_lat) & (lats <= max_lat)
+            lon_mask = (lons >= min_lon) & (lons <= max_lon)
+            if not lat_mask.any() or not lon_mask.any():
+                info_div.text = "Box: no grid points in region!"
+                timeseries_src.data = dict(time=[], value=[], hidden=[])
+                atimeseries_src.data = dict(time=[], value=[], hidden=[])
 
-        # -- cycle (mean per group)
-        means = []
-        for g in group_range:
-            vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
-            means.append(np.nanmean(vals) if np.any(~np.isnan(vals)) else np.nan)
-        cycleplot_src.data = dict(time=group_labels, value=means)
-        cycleplot.x_range.factors = group_labels
+                cycleplot_src.data = dict(time=[], value=[])
+                trendbar_src.data = dict(time=[], value=[])
+                return
 
-        mmin = np.nanmin(means)
-        mmax = np.nanmax(means)
-        cycleplot.y_range = Range1d(start=mmin, end=mmax)
+            # Get the spatial region
 
-        # -- trend (slope per group)
-        trends = []
-        for g in group_range:
-            vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
-            if len(vals) < 2 or np.all(np.isnan(vals)):
-                trends.append(np.nan)
-                continue
-            valid = ~np.isnan(vals)
-            if np.sum(valid) < 2:
-                trends.append(np.nan)
-                continue
-            t_sel = vals.index[valid]
-            t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
-            y_sel = vals.values[valid]
-            slope, *_ = linregress(t_num, y_sel)
-            trends.append(slope)
+            arr = ds[varname][:, lat_mask, :][:, :, lon_mask]
+            lats_sub = ds.latitude.values[lat_mask]
+            # Compute weights: shape (n_lats, 1)
+            weights = np.cos(np.deg2rad(lats_sub)).reshape(-1, 1)
+            weights = weights / weights.sum()  # normalize so sum=1
 
-        colorss = ['purple' if v >= 0 else 'orange' for v in trends]
-        trendbar_src.data = dict(time=group_labels, value=trends,colors=colorss)
-        trendbar.y_range.factors = group_labels[::-1]
-        mm = np.nanmax(np.abs(trends))
-        trendbar.x_range = Range1d(start=-mm-mm*0.01, end=mm+mm*0.01)
-        trendbar.title.text = f"Trend for the {len(group_labels)} {'hours' if mode == 0 else 'months'}"
+            # Weighted average for each timestep
+            # arr: shape (time, n_lats, n_lons)
+            # weights: (n_lats, 1), will broadcast over n_lons
+            weighted = arr * weights  # shape (time, n_lats, n_lons)
+            avg_ts = np.nansum(weighted, axis=(1,2)) / np.nansum(~np.isnan(arr) * weights, axis=(1,2))
+
+            # Update timeseries plot
+
+            # Times and values
+            times = ds['valid_time'].values
+            times = pd.to_datetime(times)
+            values = avg_ts.values if hasattr(avg_ts, "values") else avg_ts
+            timeseries_src.data = dict(time=times, value=values, hidden=[False]*len(times) )
 
 
 
+            ylabel = f"{variable_units_map.get(variable)}"
+            times = ds['valid_time'].values
+            times = pd.to_datetime(times)
+
+
+            months = times.month
+            colors = [month_colors[m-1] for m in months]
+
+
+
+            
+            timeseries_src.data = dict(
+                time=times,
+                value=values,
+                hidden=[False]*len(times),
+                month=[month_names[m-1] for m in months],
+                color=[month_colors[m-1] for m in months],
+            )
+            for i, name in enumerate(month_names):
+                boolean_filters[i].booleans = [m == name for m in timeseries_src.data['month']]
+                
+            
+            
+
+            series = pd.Series(avg_ts, index=pd.to_datetime(times))
+            monthly_means = series.groupby(series.index.month).mean()
+            # print(monthly_means)
+            # print('series', series)
+
+            timeseries_plot.yaxis.axis_label = ylabel
+            x_min = times.min()
+            x_max = times.max()
+            # After updating timeseries_src.data and after calculating y_min/y_max:
+            if len(values) > 0 and np.any(np.isfinite(values)):
+                y_min = np.nanmin(values)
+                y_max = np.nanmax(values)
+                y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
+                timeseries_plot.y_range = Range1d(start=y_min - y_pad, end=y_max + y_pad)
+                timeseries_plot.x_range = Range1d(start=x_min, end=x_max)
+
+            else:
+                timeseries_plot.y_range = Range1d(start=0, end=1)
+
+
+
+
+            if mode == 1:
+
+                # anomalies
+                df = pd.DataFrame({'value': values}, index=times)
+                monthly_means = df.groupby(df.index.month)['value'].transform('mean')
+                avalues = df['value'] - monthly_means
+
+                npts = len(avalues)
+                order=3
+                window=121
+                window = get_valid_savgol_window(window, order, npts)
+                if window is not None and npts >= window:
+                    try:
+                        afiltered = savgol_filter(np.nan_to_num(avalues, nan=0.0), window, order)
+                    except Exception as e:
+                        afiltered = avalues
+                else:
+                    afiltered = avalues  # Not enough points to filter
+
+                atimeseries_src.data = dict(
+                    time=times,
+                    avalue=avalues,afiltered=afiltered,
+                    hidden=[False]*len(times),
+                    month=[month_names[m-1] for m in months],
+                    color=[month_colors[m-1] for m in months],
+                )
+                for i, name in enumerate(month_names):
+                    aboolean_filters[i].booleans = [m == name for m in atimeseries_src.data['month']]
+                    
+
+
+                atimeseries_plot.yaxis.axis_label = ylabel
+                x_min = times.min()
+                x_max = times.max()
+                # After updating timeseries_src.data and after calculating y_min/y_max:
+                if len(avalues) > 0 and np.any(np.isfinite(avalues)):
+                    y_min = np.nanmin(avalues)
+                    y_max = np.nanmax(avalues)
+                    y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
+                    xx = np.maximum(np.abs(y_min) ,np.abs(y_max))
+                    atimeseries_plot.y_range = Range1d(start=-xx, end=xx)
+                    atimeseries_plot.x_range = Range1d(start=x_min, end=x_max)
+
+                else:
+                    atimeseries_plot.y_range = Range1d(start=-1, end=1)
+
+                # Slope and p-value for the spatial mean
+                mask = pd.notnull(avalues) & ~pd.isna(avalues)
+                if np.sum(mask) > 2:
+                    y = avalues[mask]
+                    x = np.arange(len(y))
+                    result = linregress(x, y)
+                    slope = f"{result.slope:.4e}"
+                    pval = f"{result.pvalue:.3e}"
+                else:
+                    slope = "--"
+                    pval = "--"
+            else:
+                atimeseries_src.data = dict(times=[],avalue=[],afiltered=[],hidden=[],month=[],color=[])
+
+                # Slope and p-value for the spatial mean
+                mask = pd.notnull(values) & ~pd.isna(values)
+                if np.sum(mask) > 2:
+                    y = values[mask]
+                    x = np.arange(len(y))
+                    result = linregress(x, y)
+                    slope = f"{result.slope:.4e}"
+                    pval = f"{result.pvalue:.3e}"
+                else:
+                    slope = "--"
+                    pval = "--"
+
+
+
+            info_div.text = (
+                f"Box:<br>Lat [{min_lat:.3f}, {max_lat:.3f}], <br>"
+                f"Lon [{min_lon:.3f}, {max_lon:.3f}] <br>"
+                f"Slope: <b>{slope}</b> <br> p-value: <b>{pval}</b>"
+            )
+            # --- CYCLE PLOT AND TRENDBAR LOGIC ---
+
+            dt = pd.to_datetime(times)
+            avg_series = pd.Series(values, index=dt)
+
+            if mode == 1:  # Monthly
+                groupby_vals = dt.month
+                group_labels = months_names
+                group_colors = month_colors
+                group_range = range(0, 12)
+            else:
+                groupby_vals = dt.hour
+                group_labels = hour_labels
+                group_colors = hour_colors
+                group_range = range(24)
+
+            # -- cycle (mean per group)
+            means = []
+            for g in group_range:
+                vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+                means.append(np.nanmean(vals) if np.any(~np.isnan(vals)) else np.nan)
+            cycleplot_src.data = dict(time=group_labels, value=means)
+            cycleplot.x_range.factors = group_labels
+
+            mmin = np.nanmin(means)
+            mmax = np.nanmax(means)
+            cycleplot.y_range = Range1d(start=mmin, end=mmax)
+
+            # -- trend (slope per group)
+
+            if mode ==0:
+                trends = []
+                for g in group_range:
+                    vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+                    if len(vals) < 2 or np.all(np.isnan(vals)):
+                        trends.append(np.nan)
+                        continue
+                    valid = ~np.isnan(vals)
+                    if np.sum(valid) < 2:
+                        trends.append(np.nan)
+                        continue
+                    t_sel = vals.index[valid]
+                    t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
+                    y_sel = vals.values[valid]
+                    slope, *_ = linregress(t_num, y_sel)
+                    trends.append(slope)
+            else:
+                avg_series = pd.Series(avalues, index=dt)
+
+                trends = []
+                for g in group_range:
+                    vals = avg_series[groupby_vals == g if mode == 0 else (groupby_vals == g+1)]
+                    if len(vals) < 2 or np.all(np.isnan(vals)):
+                        trends.append(np.nan)
+                        continue
+                    valid = ~np.isnan(vals)
+                    if np.sum(valid) < 2:
+                        trends.append(np.nan)
+                        continue
+                    t_sel = vals.index[valid]
+                    t_num = t_sel.view('int64') / (24 * 60 * 60 * 1e9)
+                    y_sel = vals.values[valid]
+                    slope, *_ = linregress(t_num, y_sel)
+                    trends.append(slope)
+
+
+            colorss = ['purple' if v >= 0 else 'orange' for v in trends]
+            trendbar_src.data = dict(time=group_labels, value=trends,colors=colorss)
+            trendbar.y_range.factors = group_labels[::-1]
+            mm = np.nanmax(np.abs(trends))
+            trendbar.x_range = Range1d(start=-mm-mm*0.01, end=mm+mm*0.01)
+            trendbar.title.text = f"Trend for the {len(group_labels)} {'hours' if mode == 0 else 'months'}"
 
 
 
 
 
+            download_info.data = dict(
+                variable=[variable_select.value],
+                lat=[f"{min_lat:.3f}_{max_lat:.3f}"],
+                lon=[f"{min_lon:.3f}_{max_lon:.3f}"],
+            )
+        except Exception as e:
+            info_div.text = f"Box error: {e}"
+            timeseries_src.data = dict(time=[], value=[], hidden = [])
+            atimeseries_src.data = dict(time=[], value=[], hidden = [])
 
-        # Slope and p-value for the spatial mean
-        mask = pd.notnull(values) & ~pd.isna(values)
-        if np.sum(mask) > 2:
-            y = values[mask]
-            x = np.arange(len(y))
-            result = linregress(x, y)
-            slope = f"{result.slope:.4g}"
-            pval = f"{result.pvalue:.3g}"
-        else:
-            slope = "--"
-            pval = "--"
-
-        info_div.text = (
-            f"Box:<br>Lat [{min_lat:.3f}, {max_lat:.3f}], <br>"
-            f"Lon [{min_lon:.3f}, {max_lon:.3f}] <br>"
-            f"Slope: <b>{slope}</b> <br> p-value: <b>{pval}</b>"
-        )
-        download_info.data = dict(
-            variable=[variable_select.value],
-            lat=[f"{min_lat:.3f}_{max_lat:.3f}"],
-            lon=[f"{min_lon:.3f}_{max_lon:.3f}"],
-        )
-    except Exception as e:
-        info_div.text = f"Box error: {e}"
-        timeseries_src.data = dict(time=[], value=[], hidden = [])
-        cycleplot_src.data = dict(time=[], value=[])
-        trendbar_src.data = dict(time=[], value=[])
+            cycleplot_src.data = dict(time=[], value=[])
+            trendbar_src.data = dict(time=[], value=[])
 # ─── WIDGETS ─────────────────────────────────────
 data_error_div = Div(text="<pre>Waiting for Errors...</pre>", width=700, height=200, styles={ "background": "#11151c", "color": "#19ffe0", "font-family": "Consolas, monospace", "font-size": "1.06em", "margin-left": "32px", "border-radius": "12px", "box-shadow": "0 2px 16px #00ffe033", "overflow-y": "auto", "white-space": "pre-wrap", "padding": "8px 18px", 'margin-top': '30px' })
 date_time_display = Div(text="", width=340, height=32, stylesheets=[fancy_div_style])
@@ -1095,8 +1316,8 @@ for name, color in zip(month_names, month_colors):
     boolean_filters.append(boolean_filter)
 
 # -- Axes and grid styling --
-timeseries_plot.xaxis.axis_label = 'Time'
-timeseries_plot.yaxis.axis_label = 'Value'
+# timeseries_plot.xaxis.axis_label = 'Time'
+# timeseries_plot.yaxis.axis_label = 'Value'
 timeseries_plot.xgrid.grid_line_color = "#3c3c3c"
 timeseries_plot.ygrid.grid_line_color = "#3c3c3c"
 
@@ -1118,7 +1339,7 @@ scatter_taptool = TapTool(renderers=scatter_renderers)
 timeseries_plot.add_tools(scatter_taptool)
 
 # --- Wheel zoom only in x-direction ---
-wheel_zoom_x = WheelZoomTool(dimensions='width')
+wheel_zoom_x = WheelZoomTool()
 timeseries_plot.add_tools(wheel_zoom_x)
 timeseries_plot.toolbar.active_scroll = wheel_zoom_x
 
@@ -1129,7 +1350,90 @@ timeseries_plot.legend.label_text_font_size = '9pt'
 timeseries_plot.add_layout(timeseries_plot.legend[0], 'below')
 timeseries_plot.legend.click_policy = "hide"
 
+Span_height = Span(dimension="height", line_dash="dashed", line_width=2, line_color="#878787")
+Crosshair_Tool = CrosshairTool(overlay=Span_height)
+timeseries_plot.add_tools(Crosshair_Tool)
 
+
+
+
+
+
+
+
+# 1.a
+atimeseries_src = ColumnDataSource(data=dict(time=[], avalue=[], month = [],afiltered=[], color = [], hidden=[]))
+
+
+# Set up the figure
+atimeseries_plot = figure(
+    tools="pan,reset,box_zoom,save",
+    x_axis_type='datetime',
+    width=800, height=300,
+    background_fill_color="#343838",
+    border_fill_color="#343838",
+    # styles={'margin-left': '-340px'},
+)
+
+# Add grey timeseries line (behind points)
+att = atimeseries_plot.line('time', 'avalue', source=atimeseries_src, line_width=1, color="grey")
+
+# --- Add colored scatter points per month, with legend ---
+from bokeh.models import CDSView, BooleanFilter
+ascatter_renderers = []
+aboolean_filters = []
+for name, color in zip(month_names, month_colors):
+    amask = [m == name for m in atimeseries_src.data['month']]
+    aboolean_filter = BooleanFilter(amask)
+    aview = CDSView(filter=aboolean_filter)
+    ar = atimeseries_plot.scatter('time', 'avalue', source=atimeseries_src,
+                               color=color, size=6, view=aview, legend_label=name)
+    ascatter_renderers.append(ar)
+    aboolean_filters.append(aboolean_filter)
+
+# -- Axes and grid styling --
+# atimeseries_plot.xaxis.axis_label = 'Time'
+# atimeseries_plot.yaxis.axis_label = 'Value'
+atimeseries_plot.xgrid.grid_line_color = "#3c3c3c"
+atimeseries_plot.ygrid.grid_line_color = "#3c3c3c"
+atimeseries_plot.line('time', 'afiltered', source=atimeseries_src, color='red', legend_label='SG filter', line_width=4)
+
+# --- HoverTool for line (tt) ---
+acustom_tooltip = """🕒 @time{%F %H:%M} <br> <b>Value:</b> @avalue{0.0000000} """
+# If you have a custom hover function, use it, else just:
+atimeseries_plot.add_tools(HoverTool(
+    tooltips=hovfun(acustom_tooltip),
+    formatters={'@time': 'datetime'},
+    mode='vline',
+    point_policy='snap_to_data',
+    line_policy="none",
+    attachment="above",show_arrow=False,
+    renderers=[att]
+))
+
+# --- TapTool for scatter points ---
+ascatter_taptool = TapTool(renderers=ascatter_renderers)
+atimeseries_plot.add_tools(ascatter_taptool)
+
+# --- Wheel zoom only in x-direction ---
+awheel_zoom_x = WheelZoomTool()
+atimeseries_plot.add_tools(awheel_zoom_x)
+atimeseries_plot.toolbar.active_scroll = awheel_zoom_x
+
+# --- Legend setup ---
+atimeseries_plot.legend.orientation = "horizontal"
+atimeseries_plot.legend.location = "top_center"
+atimeseries_plot.legend.label_text_font_size = '9pt'
+atimeseries_plot.add_layout(atimeseries_plot.legend[0], 'below')
+atimeseries_plot.legend.click_policy = "hide"
+
+Span_height = Span(dimension="height", line_dash="dashed", line_width=2, line_color="#878787")
+Crosshair_Tool = CrosshairTool(overlay=Span_height)
+atimeseries_plot.add_tools(Crosshair_Tool)
+# Tabs(tabs=[
+#     TabPanel(child=column(timeseries,), title="Timeseries"),
+#     TabPanel(child=column(atimeseries,), title="Anomalies"),
+# ], stylesheets=[tabs_style], styles={'width':'890px'},)
 
 
 # 1b) annual cycle
@@ -1140,22 +1444,22 @@ months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
 cycleplot_src = ColumnDataSource(data=dict(time=[], value=[]))
 cycleplot = figure(tools="pan,reset,box_zoom,save",x_range=months,
     # x_axis_type='datetime',
-    width=450, height=300,
+    width=480, height=300,
     title="Cycle",
     background_fill_color="#343838",
     border_fill_color="#343838", styles = {'margin-left': '0px',},
 )
 cycleplot.vbar(x = 'time', top = 'value', source=cycleplot_src, width=0.9, line_color = 'black', hover_fill_color= 'yellow',color="deepskyblue")
-cycleplot.xaxis.axis_label = 'Time'
-cycleplot.yaxis.axis_label = 'Value'
+# cycleplot.xaxis.axis_label = 'Time'
+# cycleplot.yaxis.axis_label = 'Value'
 cycleplot.xgrid.grid_line_color = "#3c3c3c"
 cycleplot.ygrid.grid_line_color = "#3c3c3c"
 custom_tooltip = """ <div style="background-color: #fff0eb; padding: 5px; border-radius: 5px; box-shadow: 0px 0px 5px rgba(0,0,0,0.3);"> <font size="3" style="background-color: #fff0eb; padding: 5px; border-radius: 5px;"> 🕒 @time <br> <b>Value:</b> @value{0.0000000} </font> </div> <style> :host { --tooltip-border: transparent;  /* Same border color used everywhere */ --tooltip-color: transparent; --tooltip-text: #2f2f2f; } </style> """
-cycleplot.add_tools(HoverTool( tooltips=custom_tooltip, mode='vline', point_policy='snap_to_data',attachment="above", show_arrow=False))
+cycleplot.add_tools(HoverTool( tooltips=custom_tooltip, mode='vline', point_policy='snap_to_data',attachment="below", show_arrow=False))
 # scatter_rendererq = cycleplot.scatter('time', 'value', source=cycleplot_src, size=9, line_color = 'black', color="orange", alpha=0.85)
 # scatter_taptoolq = TapTool(renderers=[scatter_rendererq])
 # cycleplot.add_tools(scatter_taptoolq)
-cycleplot.xaxis.major_label_orientation = 0.6  # in radians (~34 degrees)
+cycleplot.xaxis.major_label_orientation = 0.9
 
 
 
@@ -1211,19 +1515,29 @@ image_renderer = p.image(
     source=image_src, color_mapper=color_mapper, alpha=0.6
 )
 
-# Data source for rectangles (can support multiple, but start with one)
-boxes_source = ColumnDataSource(data=dict(x=[], y=[], width=[], height=[]))
-# This will show all rectangles in boxes_source
-rb = p.rect(
-    x='x', y='y',
-    width='width', height='height',
-    source=boxes_source,
-    fill_alpha=0.3, fill_color="orange", line_color="red", line_width=3
-)
+# # Data source for rectangles (can support multiple, but start with one)
+# boxes_source = ColumnDataSource(data=dict(x=[], y=[], width=[], height=[]))
+# # This will show all rectangles in boxes_source
+# rb = p.rect(
+#     x='x', y='y',
+#     width='width', height='height',
+#     source=boxes_source,
+#     fill_alpha=0.3, fill_color="orange", line_color="red", line_width=3
+# )
 
-# Add the BoxEditTool to your map and toolbar
-box_edit_tool = BoxEditTool(renderers=[rb], num_objects=1)  # Limit to 1 rectangle at a time
-p.add_tools(box_edit_tool)
+# # Add the BoxEditTool to your map and toolbar
+# box_edit_tool = BoxEditTool(renderers=[rb], num_objects=1)  # Limit to 1 rectangle at a time
+# p.add_tools(box_edit_tool)
+
+sourcebox = ColumnDataSource( data=dict( x=[], y=[], width=[], height=[], color=['grey'], alpha=[0.35], ),)
+
+# Add box selection rectangle
+box_rect = p.rect("x", "y", "width", "height",
+                       color="color", alpha="alpha",
+                       source=sourcebox)
+box_tool = BoxSelectTool(renderers = [box_rect], persistent=True)
+p.add_tools(box_tool)
+
 
 
 # Web Mercator to Longitude
@@ -1249,11 +1563,11 @@ hover = HoverTool(
         "$x": merc_x_to_lon,
         "$y": merc_y_to_lat,
     },
-    point_policy='snap_to_data', renderers = [image_renderer],attachment="above",show_arrow=False,
+    point_policy='snap_to_data', renderers = [image_renderer],attachment="left",show_arrow=False,
 )
 p.add_tools(hover)
 
-p.scatter(x='x', y='y', source=cross_source, marker='+', size=20, color='red', line_width=2)
+p.scatter(x='x', y='y', source=cross_source, marker='+', size=24, color='red', line_width=5)
 
 
 # 2B)
@@ -1282,12 +1596,12 @@ trendbar = figure(y_range=months[::-1],
 trendbar.hbar(y = 'time', right = 'value', source=trendbar_src, height=0.9, color="colors",border_radius=5, line_color = 'black', hover_fill_color= 'lime',)
 
 # 4. Axis labels
-trendbar.xaxis.axis_label = 'Value'
-trendbar.yaxis.axis_label = 'Time'
+# trendbar.xaxis.axis_label = 'Value'
+# trendbar.yaxis.axis_label = 'Time'
 
 # 5. Grid styling
 trendbar.xgrid.grid_line_color = "#3c3c3c"
-trendbar.ygrid.grid_line_color = "#3c3c3c"
+trendbar.ygrid.grid_line_color = "#6f6e6e"
 # Add "legend only" bars at e.g. 'Jan', with zero length, fully transparent.
 trendbar.hbar(y=['Jan'], right=[float('nan')], height=0.8, color='purple', legend_label='+')
 trendbar.hbar(y=['Jan'], right=[float('nan')], height=0.8, color='orange', legend_label='–')
@@ -1296,7 +1610,7 @@ trendbar.legend.orientation = "vertical"
 trendbar.legend.location = "top_left"
 trendbar.legend.label_text_font_size = '11pt'
 trendbar.legend.click_policy = "hide"
-trendbar.xaxis.major_label_orientation = 0.8  # in radians (~34 degrees)
+trendbar.xaxis.major_label_orientation = 0.6  # in radians (~34 degrees)
 
 # 6. Custom tooltip
 custom_tooltip = """
@@ -1317,7 +1631,7 @@ custom_tooltip = """
 
 trendbar.add_tools(
     HoverTool(
-        tooltips=custom_tooltip,attachment="above",show_arrow=False,
+        tooltips=custom_tooltip,attachment="left",show_arrow=False,
         point_policy='snap_to_data'
     )
 )
@@ -1326,10 +1640,12 @@ trendbar.add_tools(
 mode_radio.active = 1
 
 mode_radio.on_change('active', on_mode_change)
-cycleplot.on_event('tap', on_timeseries_tap2)
-trendbar.on_event('tap', on_timeseries_tap2)
+# cycleplot.on_event('tap', on_timeseries_tap2)
+# trendbar.on_event('tap', on_timeseries_tap2)
 
 timeseries_plot.on_event('tap', on_timeseries_tap)
+atimeseries_plot.on_event('tap', on_timeseries_tap)
+
 button.on_click(on_click)
 start_picker.on_change("value", update_slider_range)
 end_picker.on_change("value",   update_slider_range)
@@ -1343,8 +1659,8 @@ max_input.on_change("value", on_max_change)
 date_multichoice.on_change("value", on_date_multichoice_change)
 
 # Connect the callback
-boxes_source.on_change('data', on_box_change)
-
+# boxes_source.on_change('data', on_box_change)
+p.on_event(events.SelectionGeometry, on_box_change)
 # ─── LAYOUT ─────────────────────────────────────
 
 download_button = Button(label="Download Timeseries CSV", button_type="primary", width=190, stylesheets=[style3])
