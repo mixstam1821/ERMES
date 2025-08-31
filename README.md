@@ -7,6 +7,9 @@ ERMES is an advanced interactive explorer for ERA5 reanalysis data, built in Pyt
 
 
 ---
+## UPDATE 31.08.2025:
+- CAMS Reanalysis data is now supported! In addition to the common meteorological fields, it now includes aerosol types (Black Carbon, Dust, Sulphate, Total AOD at multiple wavelengths), particulate matter (PM1, PM2.5, PM10), and key trace gases (CO, CH₄, NO₂, SO₂, and more).
+![Alt text](assets/addcams.png)
 
 ## UPDATE 02.07.2025:
 - Monthly mode by default (emphasis for climatological data)
