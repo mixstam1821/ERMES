@@ -5,7 +5,7 @@ import numpy as np
 import xarray as xr
 import cdsapi
 import warnings
-import tempfile
+import tempfile,zipfile, os
 import pandas as pd, numpy as np
 from pyproj import Transformer
 warnings.filterwarnings("ignore")
@@ -92,6 +92,54 @@ era5_variables += [
     ("total_totals_index", "Total Totals Index"),
 ]
 
+
+cams_variables = [
+
+
+
+    ("black_carbon_aerosol_optical_depth_550nm", "Black Carbon AOD @ 550 nm"),
+    ("dust_aerosol_optical_depth_550nm", "Dust AOD @ 550 nm"),
+    ("nitrate_aerosol_optical_depth_550nm", "Nitrate AOD @ 550 nm"),
+    ("organic_matter_aerosol_optical_depth_550nm", "Organic Matter AOD @ 550 nm"),
+    ("sea_salt_aerosol_optical_depth_550nm", "Sea Salt AOD @ 550 nm"),
+    ("sulphate_aerosol_optical_depth_550nm", "Sulphate AOD @ 550 nm"),
+    ("total_aerosol_optical_depth_469nm", "Total AOD @ 469 nm"),
+    ("total_aerosol_optical_depth_550nm", "Total AOD @ 550 nm"),
+    ("total_aerosol_optical_depth_670nm", "Total AOD @ 670 nm"),
+    ("total_aerosol_optical_depth_865nm", "Total AOD @ 865 nm"),
+    ("total_aerosol_optical_depth_1240nm", "Total AOD @ 1240 nm"),
+
+    # Particulate Matter
+    ("particulate_matter_1um", "Particulate Matter PM1"),
+    ("particulate_matter_2.5um", "Particulate Matter PM2.5"),
+    ("particulate_matter_10um", "Particulate Matter PM10"),
+
+    # Total Columns
+    ("total_column_carbon_monoxide", "Total Column CO"),
+
+    ("total_column_ethane", "Total Column Ethane"),
+    ("total_column_formaldehyde", "Total Column Formaldehyde"),
+    ("total_column_hydrogen_chloride", "Total Column HCl"),
+    ("total_column_hydrogen_cyanide", "Total Column HCN"),
+    ("total_column_hydrogen_peroxide", "Total Column H₂O₂"),
+    ("total_column_hydroxyl_radical", "Total Column OH"),
+    ("total_column_isoprene", "Total Column Isoprene"),
+    ("total_column_methane", "Total Column Methane"),
+    ("total_column_nitric_acid", "Total Column HNO₃"),
+    ("total_column_nitrogen_dioxide", "Total Column NO₂"),
+    ("total_column_nitrogen_monoxide", "Total Column NO"),
+    ("total_column_peroxyacetyl_nitrate", "Total Column PAN"),
+    ("total_column_propane", "Total Column Propane"),
+    ("total_column_sulphur_dioxide", "Total Column SO₂"),
+
+
+]
+
+all_variables = era5_variables + cams_variables
+
+
+
+
 variable_netcdf_map = {
     "10m_u_component_of_wind": "u10",
     "10m_v_component_of_wind": "v10",
@@ -127,6 +175,45 @@ variable_netcdf_map.update({
     "total_column_ozone": "tco3",
     "total_column_water_vapour": "tcwv",
     "total_totals_index": "totalx",
+
+
+    "black_carbon_aerosol_optical_depth_550nm": "bcaod550",
+    "dust_aerosol_optical_depth_550nm": "duaod550",
+    "nitrate_aerosol_optical_depth_550nm": "niaod550",
+    "organic_matter_aerosol_optical_depth_550nm": "omaod550",
+    "sea_salt_aerosol_optical_depth_550nm": "ssaod550",
+    "sulphate_aerosol_optical_depth_550nm": "suaod550",
+    "total_aerosol_optical_depth_469nm": "aod469",
+    "total_aerosol_optical_depth_550nm": "aod550",
+    "total_aerosol_optical_depth_670nm": "aod670",
+    "total_aerosol_optical_depth_865nm": "aod865",
+    "total_aerosol_optical_depth_1240nm": "aod1240",
+
+    # PM
+    "particulate_matter_1um": "pm1",
+    "particulate_matter_2.5um": "pm2p5",
+    "particulate_matter_10um": "pm10",
+
+    # Total Columns
+    "total_column_carbon_monoxide": "tcco",
+
+    "total_column_ethane": "tc_c2h6",
+    "total_column_formaldehyde": "tchcho",
+    "total_column_hydrogen_chloride": "tc_hcl",
+    "total_column_hydrogen_cyanide": "tc_HCN",
+    "total_column_hydrogen_peroxide": "tc_h2o2",
+    "total_column_hydroxyl_radical": "tc_oh",
+    "total_column_isoprene": "tc_c5h8",
+    "total_column_methane": "tc_ch4",
+    "total_column_nitric_acid": "tc_hno3",
+    "total_column_nitrogen_dioxide": "tcno2",
+    "total_column_nitrogen_monoxide": "tc_no",
+    "total_column_peroxyacetyl_nitrate": "tc_pan",
+    "total_column_propane": "tc_c3h8",
+    "total_column_sulphur_dioxide": "tcso2",
+
+
+
 })
 
 
@@ -162,9 +249,74 @@ variable_units_map = {
     "total_column_ozone": "kg/m²",
     "total_column_water_vapour": "kg/m²",
     "total_totals_index": "°C", 
+ "surface_geopotential": "m²/s²",
+    "land_sea_mask": "(0-1)",
 
+    # AOD
+    "black_carbon_aerosol_optical_depth_550nm": "(dimensionless)",
+    "dust_aerosol_optical_depth_550nm": "(dimensionless)",
+    "nitrate_aerosol_optical_depth_550nm": "(dimensionless)",
+    "organic_matter_aerosol_optical_depth_550nm": "(dimensionless)",
+    "sea_salt_aerosol_optical_depth_550nm": "(dimensionless)",
+    "sulphate_aerosol_optical_depth_550nm": "(dimensionless)",
+    "total_aerosol_optical_depth_469nm": "(dimensionless)",
+    "total_aerosol_optical_depth_550nm": "(dimensionless)",
+    "total_aerosol_optical_depth_670nm": "(dimensionless)",
+    "total_aerosol_optical_depth_865nm": "(dimensionless)",
+    "total_aerosol_optical_depth_1240nm": "(dimensionless)",
+
+    # PM
+    "particulate_matter_1um": "kg/m³",
+    "particulate_matter_2.5um": "kg/m³",
+    "particulate_matter_10um": "kg/m³",
+
+    # Total Columns
+    "total_column_carbon_monoxide": "kg/m²",
+
+    "total_column_ethane": "kg/m²",
+    "total_column_formaldehyde": "kg/m²",
+    "total_column_hydrogen_chloride": "kg/m²",
+    "total_column_hydrogen_cyanide": "kg/m²",
+    "total_column_hydrogen_peroxide": "kg/m²",
+    "total_column_hydroxyl_radical": "kg/m²",
+    "total_column_isoprene": "kg/m²",
+    "total_column_methane": "kg/m²",
+    "total_column_nitric_acid": "kg/m²",
+    "total_column_nitrogen_dioxide": "kg/m²",
+    "total_column_nitrogen_monoxide": "kg/m²",
+    "total_column_peroxyacetyl_nitrate": "kg/m²",
+    "total_column_propane": "kg/m²",
+    "total_column_sulphur_dioxide": "kg/m²",
 
 }
+
+
+cams_monthly_allowed = {
+    "total_aerosol_optical_depth_550nm",
+            "black_carbon_aerosol_optical_depth_550nm",
+        "dust_aerosol_optical_depth_550nm",
+        "organic_matter_aerosol_optical_depth_550nm",
+        "sea_salt_aerosol_optical_depth_550nm",
+        "sulphate_aerosol_optical_depth_550nm",
+    "total_column_carbon_monoxide",
+    "total_column_ethane",
+    "total_column_formaldehyde",
+    "total_column_hydroxyl_radical",
+    "total_column_isoprene",
+    "total_column_methane",
+    "total_column_nitric_acid",
+    "total_column_nitrogen_dioxide",
+    "total_column_nitrogen_monoxide",
+    "total_column_ozone",
+    "total_column_peroxyacetyl_nitrate",
+    "total_column_propane",
+    "total_column_sulphur_dioxide",
+    "particulate_matter_2.5um",
+    "particulate_matter_10um",
+}
+
+
+
 
 minmax_auto_set = {'value': True}   # dict for mutability in Bokeh callbacks
 is_playing = {'value': False}
@@ -717,17 +869,43 @@ def run_animation():
 
 def on_variable_change(attr, old, new):
     # Show spinner immediately
-
     div.text = wait_html
-    layout.children[2] = column(Div(text="",height = 2),button, column(div, styles = {'margin-left':'10px'}))
+    layout.children[2] = column(
+        Div(text="", height=2),
+        button,
+        column(div, styles={'margin-left': '10px'})
+    )
 
+    # Hide plots until data refresh
     for p in plots:
         p.visible = False
-    # Schedule the polling, which fetches data after UI refresh
+
+    # Reset min/max autoscaling for colorbar
     minmax_auto_set['value'] = True
 
+    # --- NEW: Check dataset type (ERA5 vs CAMS) ---
+    cams_keys = dict(cams_variables)  # just names
+    if new in cams_keys:
+        # Force CAMS → Hourly only
+        # mode_radio.active = 0
+        # mode_radio.disabled = True
+        data_error_div.text = (
+            "⚠ <b>CAMS Global Reanalysis (EAC4)</b> selected.<br>"
+        )
+    else:
+        # ERA5 → allow both hourly & monthly
+        mode_radio.disabled = False
+        data_error_div.text = ""  # clear warning
 
+
+    # 🚩 clear cached dataset so fetch runs again
+    if hasattr(doc, "_ds"):
+        delattr(doc, "_ds")
+
+
+    # Schedule the polling, which fetches data after UI refresh
     curdoc().add_timeout_callback(poll_job_status, 1)
+
 
 def on_palette_change(attr, old, new):
     color_mapper.palette = palette_dict[new]
@@ -764,33 +942,216 @@ def datepicker_str_to_utc_ts_end_of_day(date_str):
     return int(dt.timestamp() * 1000)
 
 
-# ─── Helper to fetch ERA5 into memory ───────────────────────────────────────────
+# # ─── Helper to fetch ERA5 into memory ───────────────────────────────────────────
+# def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lon):
+#     """
+#     Retrieve hourly dust export flux from ERA5 for the Med region,
+#     into an in-memory xarray.Dataset, using exactly your cdsapi.Client() snippet.
+#     """
+#     varname = variable_netcdf_map.get(variable, variable)
+#     mode = mode_radio.active  # 0 = hourly, 1 = monthly
+
+#     # Detect if variable belongs to CAMS
+#     cams_keys = dict(cams_variables)
+#     if variable in cams_keys:
+#         # --- CAMS branch (ADS API) ---
+#         client = cdsapi.Client(
+# url= "https://ads.atmosphere.copernicus.eu/api",
+# key= "73c6526b-1f98-4d5e-80e2-7ce7c393ff20",
+#             verify=0
+#         )
+
+
+#         if mode == 1:  # Monthly
+
+#             if variable not in cams_monthly_allowed:
+#                 raise ValueError(
+#                     f"Variable '{variable}' is NOT available in CAMS monthly. "
+#                     f"Allowed: {', '.join(sorted(cams_monthly_allowed))}"
+#                 )
+    
+
+#             dataset = "cams-global-reanalysis-eac4-monthly"
+#             start = pd.to_datetime(start_date)
+#             end = pd.to_datetime(end_date)
+#             months_range = pd.date_range(start, end, freq='MS')
+#             years = sorted({str(d.year) for d in months_range})
+#             months = sorted({f"{d.month:02d}" for d in months_range})
+
+#             request = {
+#                 "format": "netcdf_zip",
+#                 "variable": [variable],
+#                 "year": years,
+#                 "month": months,
+#                 "time": "00:00",
+#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+#             }
+#             with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
+#                 client.retrieve(dataset, request, tmp.name)
+
+#             with zipfile.ZipFile(tmp.name, "r") as zf:
+#                 print("Contents of ZIP:", zf.namelist())
+#                 nc_files = [f for f in zf.namelist() if f.endswith(".nc")]
+#                 if not nc_files:
+#                     raise ValueError("No .nc files inside CAMS monthly ZIP.")
+#                 nc_path = zf.extract(nc_files[0], path=tempfile.gettempdir())
+#             ds = xr.open_dataset(nc_path, engine="netcdf4")
+
+#         else:  # Hourly
+#             dataset = "cams-global-reanalysis-eac4"
+#             request = {
+#                 "format": "netcdf",
+#                 "variable": [variable],
+#                 "date": f"{start_date}/{end_date}",
+#                 "time": ["00:00","03:00","06:00","09:00","12:00","15:00","18:00","21:00"],
+#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+#             }
+#             with tempfile.NamedTemporaryFile(suffix=".nc") as tmp:
+#                 client.retrieve(dataset, request, tmp.name)
+#             ds = xr.open_dataset(tmp.name, engine="netcdf4")
+
+#     else:
+#         # --- ERA5 branch (CDS API) ---
+#         client = cdsapi.Client(
+#             url="https://cds.climate.copernicus.eu/api",
+#             key="73c6526b-1f98-4d5e-80e2-7ce7c393ff20",  # from cds.climate.copernicus.eu
+#             verify=0
+#         )
+
+#         mode = mode_radio.active  # 0=Hourly, 1=Monthly
+#         if mode == 1:
+#             dataset = "reanalysis-era5-single-levels-monthly-means"
+#             request = {
+#                 "format": "netcdf",
+#                 "product_type": "monthly_averaged_reanalysis",
+#                 "variable": [variable],
+#                 "year": list(range(int(start_date[:4]), int(end_date[:4]) + 1)),
+#                 "month": [f"{m:02d}" for m in range(1, 13)],
+#                 "time": "00:00",
+#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+#             }
+#         else:
+#             dataset = "reanalysis-era5-single-levels"
+#             request = {
+#                 "product_type": "reanalysis",
+#                 "variable": [variable],
+#                 "date": f"{start_date}/{end_date}",
+#                 "time": [f"{h:02d}:00" for h in range(24)],
+#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+#                 "format": "netcdf",
+#             }
+
+#         # --- retrieve and load dataset ---
+#         with tempfile.NamedTemporaryFile(suffix=".nc") as tmp:
+#             client.retrieve(dataset, request, tmp.name)
+#         ds = xr.open_dataset(tmp.name, engine="netcdf4")
+#     return ds
+
+
+
+
+
+
+
+MYKEY = "b687714d-b7ab-4621-b4fc-91bf042ed0fe"#"73c6526b-1f98-4d5e-80e2-7ce7c393ff20"
+
+# ─── Helper to fetch ERA5 or CAMS into memory ───────────────────────────────────────────
 def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lon):
     """
-    Retrieve hourly dust export flux from ERA5 for the Med region,
-    into an in-memory xarray.Dataset, using exactly your cdsapi.Client() snippet.
+    Retrieve ERA5 or CAMS reanalysis data for the Med region,
+    into an in-memory xarray.Dataset, using cdsapi.Client().
+    Handles:
+      - ERA5 hourly + monthly
+      - CAMS hourly
+      - CAMS monthly (special: returns netcdf_zip, must be extracted)
     """
-    # client = cdsapi.Client()
-    client = cdsapi.Client(
-    url="https://cds.climate.copernicus.eu/api",
-    key="73c6526b-1f98-4d5e-80e2-7ce7c393ff20",  
-    verify=0
-)
-    # Choose dataset and request parameters based on mode
-    mode = mode_radio.active  # 0=Hourly, 1=Monthly
+    varname = variable_netcdf_map.get(variable, variable)
+    mode = mode_radio.active  # 0 = hourly, 1 = monthly
 
-    if mode == 1:  # Monthly
-        dataset = "reanalysis-era5-single-levels-monthly-means"
+    # Detect if variable belongs to CAMS
+    cams_keys = dict(cams_variables)
+    if variable in cams_keys:
+        # --- CAMS branch (ADS API) ---
+        client = cdsapi.Client(
+            url="https://ads.atmosphere.copernicus.eu/api",
+            key=MYKEY,  # ADS key
+            verify=0
+        )
 
-        # Convert start_date, end_date to years and months lists
-        import pandas as pd
-        start = pd.to_datetime(start_date)
-        end = pd.to_datetime(end_date)
-        months_range = pd.date_range(start, end, freq='MS')
-        years = sorted({str(d.year) for d in months_range})
-        months = sorted({f"{d.month:02d}" for d in months_range})
+        if mode == 1:  # CAMS Monthly
+            if variable not in cams_monthly_allowed:
+                raise ValueError(
+                    f"Variable '{variable}' is NOT available in CAMS monthly. "
+                    f"Allowed: {', '.join(sorted(cams_monthly_allowed))}"
+                )
 
-        request = {
+            dataset = "cams-global-reanalysis-eac4-monthly"
+            start = pd.to_datetime(start_date)
+            end = pd.to_datetime(end_date)
+            months_range = pd.date_range(start, end, freq='MS')
+            years = sorted({str(d.year) for d in months_range})
+            months = sorted({f"{d.month:02d}" for d in months_range})
+
+            request = {
+                "format": "netcdf_zip",
+                "variable": [variable],
+                "year": years,
+                "month": months,
+                "time": "00:00",
+                "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+            }
+
+            # 🚩 Must keep the zip file alive until after extraction
+            tmp_zip = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
+            tmp_zip.close()
+            client.retrieve(dataset, request, tmp_zip.name)
+
+            with zipfile.ZipFile(tmp_zip.name, "r") as zf:
+                print("Contents of CAMS monthly ZIP:", zf.namelist())
+                nc_files = [f for f in zf.namelist() if f.endswith(".nc")]
+                if not nc_files:
+                    raise ValueError("No .nc files inside CAMS monthly ZIP.")
+                # extract into system tempdir
+                nc_path = zf.extract(nc_files[0], path=tempfile.gettempdir())
+
+            # cleanup .zip
+            os.remove(tmp_zip.name)
+
+            ds = xr.open_dataset(nc_path, engine="netcdf4")
+
+        else:  # CAMS Hourly
+            dataset = "cams-global-reanalysis-eac4"
+            request = {
+                "format": "netcdf",
+                "variable": [variable],
+                "date": f"{start_date}/{end_date}",
+                "time": ["00:00","03:00","06:00","09:00","12:00","15:00","18:00","21:00"],
+                "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+            }
+            with tempfile.NamedTemporaryFile(suffix=".nc") as tmp:
+                client.retrieve(dataset, request, tmp.name)
+                ds = xr.open_dataset(tmp.name, engine="netcdf4")
+
+    else:
+        # --- ERA5 branch (CDS API) ---
+        client = cdsapi.Client(
+            url="https://cds.climate.copernicus.eu/api",
+            key=MYKEY,  # CDS key
+            verify=0
+        )
+
+        if mode == 1:  # ERA5 Monthly
+
+
+            start = pd.to_datetime(start_date)
+            end = pd.to_datetime(end_date)
+            months_range = pd.date_range(start, end, freq='MS')
+            years = sorted({str(d.year) for d in months_range})
+            months = sorted({f"{d.month:02d}" for d in months_range})
+
+
+            dataset = "reanalysis-era5-single-levels-monthly-means"
+            request = {
             'format': 'netcdf',
             'product_type': 'monthly_averaged_reanalysis',
             'variable': [variable],
@@ -798,23 +1159,37 @@ def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lo
             'month': months,
             'time': '00:00',
             'area': [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],  # [N, W, S, E]
-        }
+            }
+        else:  # ERA5 Hourly
+            dataset = "reanalysis-era5-single-levels"
+            request = {
+                "product_type": "reanalysis",
+                "variable": [variable],
+                "date": f"{start_date}/{end_date}",
+                "time": [f"{h:02d}:00" for h in range(24)],
+                "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
+                "format": "netcdf",
+            }
 
-    else:  # Hourly
-        dataset = "reanalysis-era5-single-levels"
-        request = {
-            'product_type': 'reanalysis',
-            'variable': [variable],
-            'date': f'{start_date}/{end_date}',
-            'time': [f'{h:02d}:00' for h in range(24)],
-            'area': [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
-            'format': 'netcdf',
-        }
+        with tempfile.NamedTemporaryFile(suffix=".nc") as tmp:
+            client.retrieve(dataset, request, tmp.name)
+            ds = xr.open_dataset(tmp.name, engine="netcdf4")
 
-    with tempfile.NamedTemporaryFile(suffix='.nc') as tmp:
-        client.retrieve(dataset, request, tmp.name)
-        ds = xr.open_dataset(tmp.name)
     return ds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def on_timeseries_tap(event):
     # Find nearest x in timeseries_src
@@ -895,6 +1270,12 @@ def is_job_done():
         fill_date_multichoice()   # <<<--- CALL IT HERE!
         update_image(None, None, None)
         minmax_auto_set['value'] = True
+
+
+
+
+
+
     except Exception as e:
         msg = str(e)
         # Optionally, only show error if it's a data-related one:
@@ -1253,7 +1634,7 @@ notes_textarea = TextAreaInput( title="Notes / Comments", value="", width=860, h
 logo_url = "https://raw.githubusercontent.com/mixstam1821/bokeh_showcases/refs/heads/main/assets0/ermes.png"  # <-- set your actual path
 logo_div = Div( text=f'<img src="{logo_url}" style="width:200px; margin-bottom:10px;  margin-left:10px; border-radius:12px; box-shadow:0 2px 14px #00ffe055;">', width=200, height=150, styles={"display": "flex", "justify-content": "center"} )
 about_div = Div( text=""" <div style="text-align:center; color:#00ffe0; font-size:1.07em; font-family:Consolas, monospace;"> Developed with <span style="color:#ff4c4c;">&#10084;&#65039;</span> by <a href="https://github.com/mixstam1821" target="_blank" style="color:#ffb031; font-weight:bold; text-decoration:none;"> mixstam1821 </a> </div> """, width=420, height=38, styles={"margin-top": "10px"} )
-era5_div = Div( text=""" <div style="text-align:center; font-size:1.06em; color:#a5e7ff; font-family: Consolas, monospace;"> Powered by <a href="https://bokeh.org" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;">Bokeh</a> <span style="margin:0 6px;">and data from</span> <a href="https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;"> ERA5 Reanalysis (Copernicus CDS) </a> </div> """, width=440, height=38, styles={"margin-top": "2px", 'margin-left': '-30px'} )
+era5_div = Div( text=""" <div style="text-align:center; font-size:1.06em; color:#a5e7ff; font-family: Consolas, monospace;"> Powered by <a href="https://bokeh.org" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;">Bokeh</a> <span style="margin:0 6px;">and data from</span> <a href="https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;"> ERA5 and CAMS Reanalysis (Copernicus CDS) </a> </div> """, width=440, height=38, styles={"margin-top": "2px", 'margin-left': '0px'} )
 infdiv = Div( text=""" <div style="text-align:center; font-size:1.06em; color:#a5e7ff; font-family: Consolas, monospace;"> Visit the <a href="https://github.com/mixstam1821/ERMES" target="_blank" style="color:#00ffe0; font-weight:bold; text-decoration:underline;"> GitHub repo </a> for more details!  </a> </div> """, width=440, height=38, styles={"margin-top": "2px", 'margin-left': '10px'} )
 box_bounds_div = Div(text="", visible=False)
 
@@ -1270,7 +1651,7 @@ min_input = TextInput(title="min", value="0", width=80,stylesheets=[style2])
 max_input = TextInput(title="max", value="1", width=80,stylesheets=[style2])
 stats_div = Div(text=" ", width=300, height=65, styles={"font-size": "1.2em", "color": "#00ffe0"},stylesheets=[style2])
 info_div = Div( text="Lat: -- <br>Lon: -- <br>Slope: -- <br>p-value: --", width=300, height=30, styles={"font-size": "1.2em", "color": "#00ffe0", "margin": "4px","margin-left": "10px"} )
-variable_select = Select( title="Variable", value="total_precipitation", options=era5_variables, stylesheets=[style2] )
+variable_select = Select( title="Variable", value="total_precipitation", options=all_variables, stylesheets=[style2] )
 play_button = Button(label="Play ▶️", button_type="primary", width=100, stylesheets=[style3])
 date_time_display = Div(text="", width=420, height=30, styles = {"font-size": "20px", "font-family": "Consolas, 'Courier New', monospace", "color": "#00ffe0",})
 start_picker = TextInput(title="Start Date", value="2023-01-01", width=130, stylesheets=[style2])
