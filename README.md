@@ -3,6 +3,8 @@ ERA5 METEOROLOGY EXPLORER SYSTEM
 
 ERMES is an advanced interactive explorer for ERA5 reanalysis data, built in Python with Bokeh. Effortlessly load, visualize, and analyze atmospheric and oceanic variables with high precision for both recent decades and historical weather events.
 
+> **Note:** Open the app in Google Chrome or Chromium and press "YES" in the message: "Do you want to use the proxy server to make web requests?".
+
 > **Note:** ERA5 monthly means are available only up to the last fully completed month, while hourly data is accessible with a delay of a few days. Requests for the current (incomplete) month or current day will result in an error from the CDS. Such errors will be shown on the bottom right frame.
 
 
