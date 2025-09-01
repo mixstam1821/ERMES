@@ -1,5 +1,8 @@
 # ERMES.py
 
+
+MYKEY = "b687714d-b7ab-4621-b4fc-91bf042ed0fe"#"73c6526b-1f98-4d5e-80e2-7ce7c393ff20"  # <--- USE YOUR OWN KEY
+
 # ─── IMPORTS ─────────────────────────────────────
 import numpy as np
 import xarray as xr
@@ -942,118 +945,7 @@ def datepicker_str_to_utc_ts_end_of_day(date_str):
     return int(dt.timestamp() * 1000)
 
 
-# # ─── Helper to fetch ERA5 into memory ───────────────────────────────────────────
-# def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lon):
-#     """
-#     Retrieve hourly dust export flux from ERA5 for the Med region,
-#     into an in-memory xarray.Dataset, using exactly your cdsapi.Client() snippet.
-#     """
-#     varname = variable_netcdf_map.get(variable, variable)
-#     mode = mode_radio.active  # 0 = hourly, 1 = monthly
 
-#     # Detect if variable belongs to CAMS
-#     cams_keys = dict(cams_variables)
-#     if variable in cams_keys:
-#         # --- CAMS branch (ADS API) ---
-#         client = cdsapi.Client(
-# url= "https://ads.atmosphere.copernicus.eu/api",
-# key= "73c6526b-1f98-4d5e-80e2-7ce7c393ff20",
-#             verify=0
-#         )
-
-
-#         if mode == 1:  # Monthly
-
-#             if variable not in cams_monthly_allowed:
-#                 raise ValueError(
-#                     f"Variable '{variable}' is NOT available in CAMS monthly. "
-#                     f"Allowed: {', '.join(sorted(cams_monthly_allowed))}"
-#                 )
-    
-
-#             dataset = "cams-global-reanalysis-eac4-monthly"
-#             start = pd.to_datetime(start_date)
-#             end = pd.to_datetime(end_date)
-#             months_range = pd.date_range(start, end, freq='MS')
-#             years = sorted({str(d.year) for d in months_range})
-#             months = sorted({f"{d.month:02d}" for d in months_range})
-
-#             request = {
-#                 "format": "netcdf_zip",
-#                 "variable": [variable],
-#                 "year": years,
-#                 "month": months,
-#                 "time": "00:00",
-#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
-#             }
-#             with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
-#                 client.retrieve(dataset, request, tmp.name)
-
-#             with zipfile.ZipFile(tmp.name, "r") as zf:
-#                 print("Contents of ZIP:", zf.namelist())
-#                 nc_files = [f for f in zf.namelist() if f.endswith(".nc")]
-#                 if not nc_files:
-#                     raise ValueError("No .nc files inside CAMS monthly ZIP.")
-#                 nc_path = zf.extract(nc_files[0], path=tempfile.gettempdir())
-#             ds = xr.open_dataset(nc_path, engine="netcdf4")
-
-#         else:  # Hourly
-#             dataset = "cams-global-reanalysis-eac4"
-#             request = {
-#                 "format": "netcdf",
-#                 "variable": [variable],
-#                 "date": f"{start_date}/{end_date}",
-#                 "time": ["00:00","03:00","06:00","09:00","12:00","15:00","18:00","21:00"],
-#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
-#             }
-#             with tempfile.NamedTemporaryFile(suffix=".nc") as tmp:
-#                 client.retrieve(dataset, request, tmp.name)
-#             ds = xr.open_dataset(tmp.name, engine="netcdf4")
-
-#     else:
-#         # --- ERA5 branch (CDS API) ---
-#         client = cdsapi.Client(
-#             url="https://cds.climate.copernicus.eu/api",
-#             key="73c6526b-1f98-4d5e-80e2-7ce7c393ff20",  # from cds.climate.copernicus.eu
-#             verify=0
-#         )
-
-#         mode = mode_radio.active  # 0=Hourly, 1=Monthly
-#         if mode == 1:
-#             dataset = "reanalysis-era5-single-levels-monthly-means"
-#             request = {
-#                 "format": "netcdf",
-#                 "product_type": "monthly_averaged_reanalysis",
-#                 "variable": [variable],
-#                 "year": list(range(int(start_date[:4]), int(end_date[:4]) + 1)),
-#                 "month": [f"{m:02d}" for m in range(1, 13)],
-#                 "time": "00:00",
-#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
-#             }
-#         else:
-#             dataset = "reanalysis-era5-single-levels"
-#             request = {
-#                 "product_type": "reanalysis",
-#                 "variable": [variable],
-#                 "date": f"{start_date}/{end_date}",
-#                 "time": [f"{h:02d}:00" for h in range(24)],
-#                 "area": [float(max_lat), float(min_lon), float(min_lat), float(max_lon)],
-#                 "format": "netcdf",
-#             }
-
-#         # --- retrieve and load dataset ---
-#         with tempfile.NamedTemporaryFile(suffix=".nc") as tmp:
-#             client.retrieve(dataset, request, tmp.name)
-#         ds = xr.open_dataset(tmp.name, engine="netcdf4")
-#     return ds
-
-
-
-
-
-
-
-MYKEY = "b687714d-b7ab-4621-b4fc-91bf042ed0fe"#"73c6526b-1f98-4d5e-80e2-7ce7c393ff20"
 
 # ─── Helper to fetch ERA5 or CAMS into memory ───────────────────────────────────────────
 def fetch_era5(start_date, end_date, variable, min_lat, max_lat, min_lon, max_lon):
